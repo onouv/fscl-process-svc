@@ -1,0 +1,8 @@
+[package]
+name = "fscl-process-svc"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+fmt = "0.1.0"
+sea-orm = { version = "1.1.19", features = [ "sqlx-postgres", "runtime-tokio-rustls", "macros" ] }

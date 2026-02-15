@@ -4,8 +4,7 @@ use std::{fmt::{self, Display, Formatter}, str::FromStr};
 use std::result::Result;
 use std::rc::Rc;
 
-use super::sub;
-use super::sub_manager::{SubManager, HasItemId};
+use super::sub::{self, Sub, SubManager, HasItemId};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ItemId(String);

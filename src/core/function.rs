@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use super::item::{Item, ItemId};
-use super::sub_manager::HasItemId;
-use super::sub::{self, Sub};
+use super::sub::{self, Sub, HasItemId};
+
 
 #[derive(Debug, Clone)]
 pub struct Function {

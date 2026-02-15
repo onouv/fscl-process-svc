@@ -31,6 +31,6 @@ fn main() {
         }
     };
 
-
+    println!("{:?}", func);
     
 }

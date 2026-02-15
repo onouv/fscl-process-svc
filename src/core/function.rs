@@ -1,18 +1,17 @@
 use std::rc::Rc;
 
-use super::item::{BaseItem, ItemId};
-use super::sub_manager::{SubManager, HasItemId};
+use super::item::{Item, ItemId};
+use super::sub_manager::HasItemId;
 use super::sub::{self, Sub};
 
 #[derive(Debug, Clone)]
 pub struct Function {
-    pub item: BaseItem,
-    subs: SubManager<Function>,
+    pub item: Item<Function>,
 }
 
 impl Function {
     pub fn new(id: &str, name: &str, description: &str) -> Result<Self, ()> {
-        let item = match BaseItem::new(ItemId::new(id), name, description) {
+        let item = match Item::new(ItemId::new(id), name, description) {
             Ok(e) => e,
             Err(e) => {
                 println!("{e:?}");
@@ -20,10 +19,7 @@ impl Function {
             }
         };
 
-        Ok(Self {
-            item,
-            subs: SubManager::new(),
-        })
+        Ok(Self { item })
     }
 }
 
@@ -31,15 +27,15 @@ impl Sub for Function {
     type T = Self;
 
     fn add_sub(&mut self, sub: Function) -> Result<(), sub::Error> {
-        self.subs.add_sub(sub)
+        self.item.add_sub(sub)
     }
 
     fn remove_sub(&mut self, sub_id: ItemId) -> Result<Self::T, sub::Error> {
-        self.subs.remove_sub(&sub_id)
+        self.item.remove_sub(&sub_id)
     }
 
     fn get_sub(&self, sub_id: ItemId) -> Option<Rc<Self::T>> {
-        self.subs.get_sub(&sub_id)
+        self.item.get_sub(&sub_id)
     }
 }
 

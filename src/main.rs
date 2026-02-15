@@ -5,16 +5,13 @@ mod handlers;
 
 use actix_web::{web, App, HttpServer, middleware};
 use sea_orm::Database;
-use std::env;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     // Database URL from environment or use default
-    let database_url = env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://user:password@localhost/fscl_svc".to_string());
-
+    let database_url = repository::get_database_url();
     log::info!("Connecting to database: {}", database_url);
 
     // Connect to database

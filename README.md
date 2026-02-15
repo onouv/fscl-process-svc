@@ -1,6 +1,6 @@
 # FSCL Process Service — DB-First Skeleton
 
-A scalable, database-backed web service for managing Functions and Components, designed for tens of thousands of entities with distributed concurrent access.
+A scalable, database-backed web service for managing Functions and Components of the FSCL Process View.
 
 ## Architecture
 
@@ -71,7 +71,18 @@ This implementation uses a **DB-first, repository-based approach**:
 - Rust 1.70+
 - PostgreSQL 12+
 
-### Database Setup
+### Manual Database Setup
+
+Assuming a postgres server is running on localhost: 
+
+```bash
+>> psql -H localhost -P 5432 -U postgres
+postgres=# create database process_svc
+...
+postgres=# \c process_svc
+```
+
+Paste the following into the psql commandline:
 ```sql
 -- Create tables (manual or via migrations)
 CREATE TABLE functions (
@@ -110,7 +121,8 @@ CREATE INDEX idx_impl_component ON component_implements_function(component_id);
 ### Run
 ```bash
 # Set database URL
-export DATABASE_URL="postgres://user:password@localhost/fscl_svc"
+Modify entries in `.env`
+
 
 # Build and run
 cargo build --release

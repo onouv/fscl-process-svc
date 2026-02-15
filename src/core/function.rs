@@ -1,74 +1,76 @@
-use std::rc::Rc;
+use actix::prelude::*;
+use crate::core::ItemId;
+use crate::core::sub::Error;
 
-use super::item::{Item, ItemId};
-use super::sub::{self, Sub, HasItemId};
-
-
-#[derive(Debug, Clone)]
-pub struct Function {
-    pub item: Item<Function>,
+#[derive(Debug)]
+pub struct FunctionActor {
+    pub id: ItemId,
+    pub name: String,
+    pub description: String,
+    subs: Vec<(ItemId, Addr<FunctionActor>)>,
 }
 
-impl Function {
-    pub fn new(id: &str, name: &str, description: &str) -> Result<Self, ()> {
-        let item = match Item::new(ItemId::new(id), name, description) {
-            Ok(e) => e,
-            Err(e) => {
-                println!("{e:?}");
-                return Err(());
-            }
-        };
-
-        Ok(Self { item })
-    }
-}
-
-impl Sub for Function {
-    type T = Self;
-
-    fn add_sub(&mut self, sub: Function) -> Result<(), sub::Error> {
-        self.item.add_sub(sub)
-    }
-
-    fn remove_sub(&mut self, sub_id: ItemId) -> Result<Self::T, sub::Error> {
-        self.item.remove_sub(&sub_id)
-    }
-
-    fn get_sub(&self, sub_id: ItemId) -> Option<Rc<Self::T>> {
-        self.item.get_sub(&sub_id)
+impl FunctionActor {
+    pub fn start_new(id: &str, name: &str, description: &str) -> Addr<FunctionActor> {
+        FunctionActor {
+            id: ItemId::new(id),
+            name: name.to_string(),
+            description: description.to_string(),
+            subs: Vec::new(),
+        }
+        .start()
     }
 }
 
-impl HasItemId for Function {
-    fn item_id(&self) -> &ItemId {
-        &self.item.id
+impl Actor for FunctionActor {
+    type Context = Context<Self>;
+}
+
+/// Message to add a sub-function (provide its id and address)
+#[derive(Message)]
+#[rtype(result = "Result<(), Error>")]
+pub struct AddSub(pub ItemId, pub Addr<FunctionActor>);
+
+#[derive(Message)]
+#[rtype(result = "Result<Addr<FunctionActor>, Error>")]
+pub struct RemoveSub(pub ItemId);
+
+#[derive(Message)]
+#[rtype(result = "Option<Addr<FunctionActor>>")]
+pub struct GetSub(pub ItemId);
+
+impl Handler<AddSub> for FunctionActor {
+    type Result = Result<(), Error>;
+
+    fn handle(&mut self, msg: AddSub, _ctx: &mut Self::Context) -> Self::Result {
+        let AddSub(id, addr) = msg;
+        if self.subs.iter().any(|(existing_id, _)| existing_id == &id) {
+            return Err(Error::ItemIdAlreadyRegistered);
+        }
+        self.subs.push((id, addr));
+        Ok(())
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use super::sub::Sub;
+impl Handler<RemoveSub> for FunctionActor {
+    type Result = Result<Addr<FunctionActor>, Error>;
 
-    #[test]
-    fn function_should_accept_subs() {
-        let res = Function::new("=100", "Protect PAX", "none");
-        
-        assert!(res.is_ok());
-        let mut f100 = res.unwrap();
-        
-        let res2 =  Function::new("=100.001", "Prevent Shaft Fall", "none");
-        assert!(res2.is_ok());
-        let f100_001 = res2.unwrap();
-        
-        
-        let add_res = f100.add_sub(f100_001);
-        assert!(add_res.is_ok());
+    fn handle(&mut self, msg: RemoveSub, _ctx: &mut Self::Context) -> Self::Result {
+        let RemoveSub(id) = msg;
+        if let Some(pos) = self.subs.iter().position(|(existing_id, _)| existing_id == &id) {
+            let (_id, addr) = self.subs.remove(pos);
+            Ok(addr)
+        } else {
+            Err(Error::ItemIdNotFound)
+        }
+    }
+}
 
-        let res3 = f100.get_sub(ItemId::new("=100.001"));
-        assert!(res3.is_some());
-        let f_ref = res3.unwrap();
-        assert!(f_ref.item.id == ItemId::new("=100.001"));
-        assert_eq!(f_ref.item.name, "Prevent Shaft Fall");
+impl Handler<GetSub> for FunctionActor {
+    type Result = Option<Addr<FunctionActor>>;
+
+    fn handle(&mut self, msg: GetSub, _ctx: &mut Self::Context) -> Self::Result {
+        let GetSub(id) = msg;
+        self.subs.iter().find(|(existing_id, _)| existing_id == &id).map(|(_, addr)| addr.clone())
     }
 }

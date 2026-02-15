@@ -1,7 +1,10 @@
 mod item;
-mod function;
 mod sub;
+mod function;
+mod component;
 
 pub use item::ItemId;
-pub use function::Function;
-pub use sub::Sub;
+pub use sub::Error as SubError;
+
+pub use function::FunctionActor;
+pub use component::ComponentActor;

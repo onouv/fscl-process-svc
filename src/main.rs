@@ -1,36 +1,47 @@
 
-mod core;
-use crate::core::{ Function, Sub };
+mod models;
+mod repository;
+mod handlers;
 
-static FUNCTION_ERROR: i32 = -1;
+use actix_web::{web, App, HttpServer, middleware};
+use sea_orm::Database;
+use std::env;
 
-fn main() {
-    println!("FSCL process service starting up.");
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let mut func = match Function::new("=100", "Protect PAX", "none") {
-        Ok(f) => f,
-        Err(_) => {
-            println!("Failed to create function");
-            std::process::exit(FUNCTION_ERROR);
+    // Database URL from environment or use default
+    let database_url = env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://user:password@localhost/fscl_svc".to_string());
+
+    log::info!("Connecting to database: {}", database_url);
+
+    // Connect to database
+    let db = match Database::connect(&database_url).await {
+        Ok(db) => {
+            log::info!("✓ Connected to database");
+            db
+        }
+        Err(err) => {
+            log::error!("✗ Failed to connect to database: {}", err);
+            std::process::exit(1);
         }
     };
 
-    let sub_func = match Function::new("=101", "Sub Function", "none") {
-        Ok(f) => f,
-        Err(_) => {
-            println!("Failed to create sub function");
-            std::process::exit(FUNCTION_ERROR);
-        }
-    };
+    let repo = repository::Repository::new(db);
 
-    match func.add_sub(sub_func) {
-        Ok(_) => println!("Sub function added successfully"),
-        Err(e) => {
-            println!("Failed to add sub function: {:?}", e);
-            std::process::exit(FUNCTION_ERROR);
-        }
-    };
+    log::info!("FSCL process service (DB-first) starting on http://0.0.0.0:8080");
 
-    println!("{:?}", func);
-    
+    // Start Actix web server
+    HttpServer::new(move || {
+        App::new()
+            .app_data(web::Data::new(repo.clone()))
+            .wrap(middleware::Logger::default())
+            .configure(handlers::configure)
+            .route("/health", web::get().to(|| async { "OK" }))
+    })
+    .bind("0.0.0.0:8080")?
+    .run()
+    .await
 }

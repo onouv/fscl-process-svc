@@ -12,30 +12,9 @@ pub struct CreateFunctionRequest {
     pub parent_id: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct CreateComponentRequest {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    #[serde(default)]
-    pub parent_id: Option<String>,
-}
 
-#[derive(Serialize, Deserialize)]
-pub struct AddSubRequest {
-    pub child_id: String,
-}
 
-#[derive(Serialize, Deserialize)]
-pub struct ImplementFunctionRequest {
-    pub function_id: String,
-}
-
-#[derive(Serialize)]
-pub struct ErrorResponse {
-    pub error: String,
-}
-
+/*
 // ===== Function Handlers =====
 
 pub async fn create_function(
@@ -134,7 +113,7 @@ pub async fn add_function_sub(
 // ===== Component Handlers =====
 
 pub async fn create_component(
-    repo: web::Data<Repository>,
+    repo: web::Data<ComponentService>,
     req: web::Json<CreateComponentRequest>,
 ) -> impl Responder {
     match repo
@@ -251,24 +230,4 @@ pub async fn implement_function(
         }
     }
 }
-
-pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::scope("/api")
-            .service(
-                web::scope("/functions")
-                    .route("", web::post().to(create_function))
-                    .route("", web::get().to(list_functions))
-                    .route("/{id}", web::get().to(get_function))
-                    .route("/{id}/subs", web::post().to(add_function_sub)),
-            )
-            .service(
-                web::scope("/components")
-                    .route("", web::post().to(create_component))
-                    .route("", web::get().to(list_components))
-                    .route("/{id}", web::get().to(get_component))
-                    .route("/{id}/subs", web::post().to(add_component_sub))
-                    .route("/{id}/implements", web::post().to(implement_function)),
-            ),
-    );
-}
+*/

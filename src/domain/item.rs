@@ -1,5 +1,7 @@
 use std::{fmt::{self, Display, Formatter}, str::FromStr};
 
+pub trait Item {}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ItemId(String);
 

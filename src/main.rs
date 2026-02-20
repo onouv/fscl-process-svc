@@ -1,44 +1,30 @@
 
-mod models;
-mod repository;
-mod handlers;
+mod domain;
+mod ports;
+mod adapters;
+mod application;
 
-use actix_web::{web, App, HttpServer, middleware};
-use sea_orm::Database;
+
+use adapters::{
+    driving::db::*,
+    driven::web::http_server::Server,
+};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    // Database URL from environment or use default
-    let database_url = repository::get_database_url();
-    log::info!("Connecting to database: {}", database_url);
+    let repo = seaorm_repository::SeaOrmRepository::new().await;
+    let component_service = application::component_service::ComponentService::new(repo);
 
-    // Connect to database
-    let db = match Database::connect(&database_url).await {
-        Ok(db) => {
-            log::info!("✓ Connected to database");
-            db
-        }
-        Err(err) => {
-            log::error!("✗ Failed to connect to database: {}", err);
-            std::process::exit(1);
-        }
-    };
-
-    let repo = repository::Repository::new(db);
-
-    log::info!("FSCL process service (DB-first) starting on http://0.0.0.0:8080");
+    log::info!("FSCL process service starting on http://0.0.0.0:8080");
 
     // Start Actix web server
-    HttpServer::new(move || {
-        App::new()
-            .app_data(web::Data::new(repo.clone()))
-            .wrap(middleware::Logger::default())
-            .configure(handlers::configure)
-            .route("/health", web::get().to(|| async { "OK" }))
-    })
-    .bind("0.0.0.0:8080")?
-    .run()
-    .await
+    let server = Server::new(component_service);
+    match server.run().await {
+        Ok(_) => log::info!("FSCL process service stopped gracefully."),
+        Err(e) => log::error!("FSCL process service encountered an error: {}", e),
+    } 
+
+    Ok(())
 }

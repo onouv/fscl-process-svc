@@ -1,16 +1,18 @@
 use sea_orm::{
-    prelude::*, ActiveValue, IntoActiveModel, Condition, QueryOrder, PaginatorTrait,
+   Database, prelude::*
 };
-use uuid::Uuid;
-use chrono::Utc;
-use thiserror::Error;
 
 use dotenv::dotenv;
 use std::env;
 
-use crate::models::{function, component, component_implements_function};
+use crate::{adapters::driving::db::ItemRepository, domain::item::ItemId};
 
-pub fn get_database_url() -> String {
+use super::{
+    error::RepositoryError,
+    models::{function, component, component_implements_function}
+};
+
+fn get_database_url() -> String {
     dotenv().ok();
     let db_type = env::var("DB_TYPE").unwrap_or_else(|_| "postgres".to_string());
     let db_host = env::var("DB_HOST").unwrap_or_else(|_| "localhost".to_string());
@@ -21,17 +23,7 @@ pub fn get_database_url() -> String {
     format!("{}://{}:{}@{}/{}", db_type, db_user, db_password, db_host, db_name)
 }
 
-#[derive(Error, Debug)]
-pub enum RepositoryError {
-    #[error("Database error: {0}")]
-    DbError(String),
-    #[error("Not found")]
-    NotFound,
-    #[error("Conflict: {0}")]
-    Conflict(String),
-    #[error("Invalid operation: {0}")]
-    InvalidOperation(String),
-}
+
 
 impl From<DbErr> for RepositoryError {
     fn from(err: DbErr) -> Self {
@@ -40,18 +32,45 @@ impl From<DbErr> for RepositoryError {
 }
 
 #[derive(Clone)]
-pub struct Repository {
+pub struct SeaOrmRepository {
     db: DbConn,
 }
 
-impl Repository {
-    pub fn new(db: DbConn) -> Self {
+impl SeaOrmRepository {
+    pub async fn new() -> Self {
+        // Database URL from environment or use default
+        let database_url = get_database_url();
+        log::info!("Connecting to database: {}", database_url);
+
+        // Connect to database
+        let db = match Database::connect(&database_url).await {
+            Ok(db) => {
+                log::info!("✓ Connected to database");
+                db
+            }
+            Err(err) => {
+                log::error!("✗ Failed to connect to database: {}", err);
+                std::process::exit(1);
+            }
+        };
         Self { db }
     }
 
     // ===== Function Operations =====
+}
 
-    pub async fn create_function(
+impl ItemRepository for SeaOrmRepository {
+
+    fn exist_item(id: ItemId) -> impl Future<Output = Result<bool, RepositoryError>> + Send {
+        async {
+            todo!()
+        }
+    }
+}
+
+/*
+impl ComponentRepository for SeaOrmRepository { 
+   create_function(
         &self,
         id: &str,
         name: &str,
@@ -284,3 +303,4 @@ impl Repository {
             .await?)
     }
 }
+*/

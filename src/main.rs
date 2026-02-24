@@ -17,9 +17,8 @@ async fn main() -> std::io::Result<()> {
     let repo = seaorm_repository::SeaOrmRepository::new().await;
     let component_service = application::component_service::ComponentService::new(repo);
 
-    log::info!("FSCL process service starting on http://0.0.0.0:8080");
 
-    // Start Actix web server
+    // Start web server
     let server = Server::new(component_service);
     match server.run().await {
         Ok(_) => log::info!("FSCL process service stopped gracefully."),

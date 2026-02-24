@@ -1,9 +1,9 @@
 mod models;
-pub mod seaorm_repository; 
-pub mod error;
+pub(crate) mod seaorm_repository; 
+pub(crate) mod error;
 mod item_repository;
-pub use item_repository::*;
-pub mod repository;
+pub(crate) use item_repository::*;
+pub(crate) mod repository;
 
-mod component_repository;
-pub use component_repository::*;
+pub(crate) mod component_repository;
+pub(crate) use component_repository::*;

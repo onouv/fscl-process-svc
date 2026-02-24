@@ -1,4 +1,3 @@
-pub mod component;
-pub mod function;
-pub mod item;
-pub mod use_cases;
+pub(crate) mod component;
+pub(crate) mod function;
+pub(crate) mod item;

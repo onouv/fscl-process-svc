@@ -15,8 +15,12 @@ impl<R> ComponentService<R> where R: ComponentRepository {
     }
 }
 
-impl<R> ComponentPort for ComponentService<R> where R: ComponentRepository {
+impl<R> ComponentPort for ComponentService<R> 
+where 
+    R: ComponentRepository + Send + Sync + 'static
+{
     fn new_component(
+        &self,
         req: crate::ports::component_port::CreateComponentRequest,
     ) -> impl Future<Output = Result<(), ComponentError>> + Send {
         async move {
@@ -25,6 +29,7 @@ impl<R> ComponentPort for ComponentService<R> where R: ComponentRepository {
     }
 
     fn new_sub_component(
+        &self,
         parent: ItemId,
         req: crate::ports::component_port::CreateComponentRequest,
     ) -> impl Future<Output = Result<(), crate::ports::component_port::ComponentError>> + Send {

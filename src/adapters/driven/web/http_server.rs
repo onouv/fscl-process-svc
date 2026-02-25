@@ -1,27 +1,46 @@
-use actix_web::{App, HttpServer, middleware, web};
+use std::{net::SocketAddr, sync::Arc};
 
-use crate::adapters::driving::db::ComponentRepository;
-use crate::application::component_service::ComponentService;
+use crate::{
+    adapters::driven::web::app_state::AppState, ports::component_port::ComponentPort
+};
+use anyhow::Context;
+use axum::{self, Router, routing::post};
+use tokio::net::TcpListener;
 
-pub struct Server<R: ComponentRepository> {
-    component_service: ComponentService<R>,
+pub(crate) struct HttpServerConfig {
+    pub ip: SocketAddr,
 }
 
-impl<R: ComponentRepository> Server<R> {
-    pub fn new(component_service: ComponentService<R>) -> Self {
-        Self { component_service }
+pub struct HttpServer {
+    router: Router,
+    listener: TcpListener
+}
+
+impl HttpServer {
+    pub async fn new(cfg: HttpServerConfig, component_service: impl ComponentPort) -> anyhow::Result<Self> {
+        let state= AppState { component_service: Arc::new(component_service) };
+        let router = Router::new() 
+            .nest("/api/v1", build_routes())
+            .with_state(state);
+        let listener = TcpListener::bind(cfg.ip).await.unwrap();
+        Ok(Self {
+            router,
+            listener
+        })
     }
 
-    pub async fn run(self) -> std::io::Result<()> {
+    pub async fn run(self) -> anyhow::Result<()> {
         log::info!("FSCL process service starting on http://0.0.0.0:8080");
-
-        let server = HttpServer::new(move || {
-            App::new()
-                .app_data(web::Data::new(self.component_service.clone()))
-                .wrap(middleware::Logger::default())
-                .configure(super::configure)
-                .route("/health", web::get().to(|| async { "OK" }))
-        });
-        server.bind("0.0.0.0:8080")?.run().await
+        
+        axum::serve(self.listener, self.router).await.context("unknown server error")?;
+        Ok(()) 
     }
+}
+
+fn build_routes<C: ComponentPort>() -> Router<AppState<C>>
+{
+    Router::new().route(
+        "/process/components",
+        post(super::component::handlers::create_component::<C>)
+    )
 }

@@ -21,8 +21,7 @@ async fn main() -> anyhow::Result<()> {
     let repo = seaorm_repository::SeaOrmRepository::new().await;
     let component_service = application::component_service::ComponentService::new(repo);
 
-
-    // Start web server
+    // Start HTTP server
     let cfg = HttpServerConfig {
         ip: std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),8080)
     };

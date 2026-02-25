@@ -1,77 +1,37 @@
-# FSCL Process Service — DB-First Skeleton
+# FSCL Process Service — Hexagonal Skeleton 
 
-A scalable, database-backed web service for managing Functions and Components of the FSCL Process View.
+A web service for managing Components of the FSCL Process View.
 
 ## Architecture
 
-This implementation uses a **DB-first, repository-based approach**:
+Implementig a hexagonal architecture.
 
-- **Models**: SeaORM entities (`Function`, `Component`, `ComponentImplementsFunction`)
-  - Plain domain types with no concurrency primitives
-  - Persist to PostgreSQL with optimistic locking (version column)
-  - Support parent-child hierarchies
+### Adapters: 
 
-- **Repository Layer** (`src/repository.rs`):
-  - Single-responsibility methods for CRUD, relations, and operations
-  - Errors typed with `thiserror`
-  - Pagination support for list endpoints
-  - Optimistic locking for concurrent updates
+#### Inbound Web/ REST API
 
-- **Handlers** (`src/handlers.rs`):
-  - Actix-web async endpoints for REST API
-  - JSON request/response DTOs
-  - Proper HTTP status codes and error handling
-  - Request validation and pagination
+Wrapping Axum in an `HttpServer` type. 
 
-- **Server** (`src/main.rs`):
-  - Tokio async runtime + Actix-web
-  - PostgreSQL connection via SeaORM
-  - Logging via `env_logger`
+#### Outbound Database
 
-## API Endpoints
+PostgreSQL 12+
 
-### Functions
-- `POST /api/functions` — Create function
-- `GET /api/functions` — List functions (paginated)
-- `GET /api/functions/{id}` — Get function by ID
-- `POST /api/functions/{id}/subs` — Add sub-function
+`ComponentRepository`
 
-### Components
-- `POST /api/components` — Create component
-- `GET /api/components` — List components (paginated)
-- `GET /api/components/{id}` — Get component by ID
-- `POST /api/components/{id}/subs` — Add sub-component
-- `POST /api/components/{id}/implements` — Implement a function
+### Ports
 
-### Health Check
-- `GET /health` — Service health check
+`ComponentPort`
 
-## Design Decisions
+### Domain
 
-### Why Not Actors?
-- Actors are great for single-threaded state machines, but with tens of thousands of entities, maintaining one actor per entity is wasteful.
-- Database (PostgreSQL) is the canonical store; entities are loaded on-demand.
-- Future: add sharded actor cache for hot-read optimization if needed.
+#### Application Services
+`ComponentService` 
+- implementing `ComponentPort`
+- using `ComponentRepository`
 
-### Concurrency & Consistency
-- **Optimistic locking**: version field in entity prevents write conflicts
-- **Pagination**: efficient list queries with limit/offset
-- **Foreign keys**: database enforces referential integrity
-- **Transactions**: SeaORM session can wrap multi-step operations
-
-### Scalability
-- Stateless handlers → horizontally scalable
-- Connection pooling via SeaORM
-- Database indices on `(parent_id, created_at)`
-- Read replicas for analytics/reporting
 
 ## Setup
-
-### Prerequisites
-- Rust 1.70+
-- PostgreSQL 12+
-
-### Manual Database Setup
+### Database Setup
 
 Assuming a postgres server is running on localhost: 
 
@@ -118,7 +78,7 @@ CREATE INDEX idx_components_parent_created ON components(parent_id, created_at);
 CREATE INDEX idx_impl_component ON component_implements_function(component_id);
 ```
 
-### Run
+## Run
 ```bash
 # Set database URL
 Modify entries in `.env`
@@ -133,53 +93,13 @@ cargo run --release
 
 ## Example Usage
 
-### Create a Function
-```bash
-curl -X POST http://localhost:8080/api/functions \
-  -H "Content-Type: application/json" \
-  -d '{"id": "=100", "name": "Protect PAX", "description": "Main safety function"}'
-```
-
 ### Create a Component
 ```bash
-curl -X POST http://localhost:8080/api/components \
+curl -X POST http://localhost:8080/api/v1/process/components \
   -H "Content-Type: application/json" \
-  -d '{"id": "C100", "name": "Door Lock", "description": "Component that implements =100"}'
+  -d '{"id": "C100", "name": "Door Lock" }'
 ```
 
-### Implement Function on Component
-```bash
-curl -X POST http://localhost:8080/api/components/C100/implements \
-  -H "Content-Type: application/json" \
-  -d '{"function_id": "=100"}'
-```
-
-### List with Pagination
-```bash
-curl "http://localhost:8080/api/functions?limit=20&offset=0"
-```
-
-## Future Enhancements
-
-1. **Migrations**: Use `sea-orm-migration` CLI to generate and manage schema versions
-2. **Read Models**: Denormalized views for reporting (CQRS pattern)
-3. **Caching**: Redis or in-process LRU for hot reads (hierarchies, implementations)
-4. **Sharded Actor Cache**: Load-on-demand actor cache for complex multi-entity operations
-5. **GraphQL**: Query complex relationships efficiently
-6. **Audit Trail**: Immutable event log for compliance
-7. **Soft Deletes**: Timestamp-based soft deletes for data recovery
-8. **WebSocket**: Real-time updates via actor broadcasts
-
-## Dependencies
-
-- `sea-orm`: ORM with async, typed queries
-- `actix-web`: Web framework
-- `tokio`: Async runtime
-- `serde` / `serde_json`: Serialization
-- `chrono`: Timestamps
-- `uuid`: ID generation
-- `thiserror`: Error handling
-- `log` / `env_logger`: Logging
 
 ## License
 

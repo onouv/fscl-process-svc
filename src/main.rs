@@ -1,36 +1,32 @@
 
-mod core;
-use crate::core::{ Function, Sub };
+mod domain;
+mod ports;
+mod adapters;
+mod application;
 
-static FUNCTION_ERROR: i32 = -1;
 
-fn main() {
-    println!("FSCL process service starting up.");
+use std::net::Ipv4Addr;
 
-    let mut func = match Function::new("=100", "Protect PAX", "none") {
-        Ok(f) => f,
-        Err(_) => {
-            println!("Failed to create function");
-            std::process::exit(FUNCTION_ERROR);
-        }
+use adapters::{
+    driving::db::*,
+    driven::web::http_server::HttpServer,
+};
+
+use crate::adapters::driven::web::http_server::HttpServerConfig;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    let repo = seaorm_repository::SeaOrmRepository::new().await;
+    let component_service = application::component_service::ComponentService::new(repo);
+
+    // Start HTTP server
+    let cfg = HttpServerConfig {
+        ip: std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),8080)
     };
 
-    let sub_func = match Function::new("=101", "Sub Function", "none") {
-        Ok(f) => f,
-        Err(_) => {
-            println!("Failed to create sub function");
-            std::process::exit(FUNCTION_ERROR);
-        }
-    };
+    let server = HttpServer::new(cfg, component_service).await?;
 
-    match func.add_sub(sub_func) {
-        Ok(_) => println!("Sub function added successfully"),
-        Err(e) => {
-            println!("Failed to add sub function: {:?}", e);
-            std::process::exit(FUNCTION_ERROR);
-        }
-    };
-
-    println!("{:?}", func);
-    
-}
+    server.run().await
+} 

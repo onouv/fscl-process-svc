@@ -8,17 +8,20 @@ pub enum ComponentError {
 
 #[derive(Clone)]
 pub struct CreateComponentRequest {
-    id: ItemId,
-    name: String,
-    description: Option<String>,
-    implementers: Option<Vec<ItemId>>,
+    pub id: ItemId,
+    pub name: String,
+    pub description: Option<String>,
+    pub implementers: Option<Vec<ItemId>>,
 }
 
-pub trait ComponentPort {
+pub trait ComponentPort: Clone + Send + Sync + 'static
+{
     fn new_component(
+        &self,
         req: CreateComponentRequest,
     ) -> impl Future<Output = Result<(), ComponentError>> + Send;
     fn new_sub_component(
+        &self,
         parent: ItemId,
         req: CreateComponentRequest,
     ) -> impl Future<Output = Result<(), ComponentError>> + Send;

@@ -5,13 +5,17 @@ mod adapters;
 mod application;
 
 
+use std::net::Ipv4Addr;
+
 use adapters::{
     driving::db::*,
-    driven::web::http_server::Server,
+    driven::web::http_server::HttpServer,
 };
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+use crate::adapters::driven::web::http_server::HttpServerConfig;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let repo = seaorm_repository::SeaOrmRepository::new().await;
@@ -19,11 +23,11 @@ async fn main() -> std::io::Result<()> {
 
 
     // Start web server
-    let server = Server::new(component_service);
-    match server.run().await {
-        Ok(_) => log::info!("FSCL process service stopped gracefully."),
-        Err(e) => log::error!("FSCL process service encountered an error: {}", e),
-    } 
+    let cfg = HttpServerConfig {
+        ip: std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),8080)
+    };
 
-    Ok(())
-}
+    let server = HttpServer::new(cfg, component_service).await?;
+
+    server.run().await
+} 

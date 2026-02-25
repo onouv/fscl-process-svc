@@ -1,1 +1,1 @@
-pub mod component_port;
+pub(crate) mod component_port;

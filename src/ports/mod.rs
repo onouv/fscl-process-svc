@@ -1,1 +1,2 @@
-pub(crate) mod component_port;
+mod component_port;
+pub(crate) use component_port::*;

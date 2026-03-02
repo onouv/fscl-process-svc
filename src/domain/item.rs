@@ -1,7 +1,9 @@
 use std::fmt::{self, Display, Formatter};
 use thiserror::Error;
 
-pub trait Item {}
+pub trait Item {
+    fn id(&self) -> ItemId;
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ItemId(String);

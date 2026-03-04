@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Start HTTP server
     let cfg = HttpServerConfig {
-        ip: std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),8080)
+        ip: std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::LOCALHOST), 3100),
     };
 
     let server = HttpServer::new(cfg, component_service).await?;

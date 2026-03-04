@@ -1,4 +1,6 @@
-use crate::domain::{Component, Item};
+use axum::{http::StatusCode, response::IntoResponse};
+
+use crate::{adapters::driven::web::responses::ApiSuccess, domain::{Component, Item}};
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 pub(crate) struct CreateComponentResponse {
@@ -10,3 +12,9 @@ impl From<&Component> for CreateComponentResponse {
         Self { id: Some(component.id().to_string()) }
     }
 } 
+
+impl IntoResponse for ApiSuccess<CreateComponentResponse> {
+    fn into_response(self) -> axum::response::Response {
+        self.into_response()
+    }
+}

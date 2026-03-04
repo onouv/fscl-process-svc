@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::ports::component_port::ComponentPort;
+use crate::ports::ComponentPort;
 
 #[derive(Clone)]
 pub(super) struct AppState<C: ComponentPort> {

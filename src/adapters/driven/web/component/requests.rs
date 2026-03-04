@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use crate::ports::component_port::{NewComponentRequest, RequestBuildError};
+use crate::ports::{NewComponentRequest, RequestBuildError};
 
 
 #[derive(Serialize, Deserialize, Debug)]

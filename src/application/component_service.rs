@@ -1,7 +1,7 @@
 use crate::{
     adapters::driving::db::component_repository::ComponentRepository, 
     domain::{component::Component, item::ItemId}, 
-    ports::component_port::{ComponentApplicationError, ComponentPort}
+    ports::{ComponentApplicationError, ComponentPort, NewComponentRequest},
 };
 
 #[derive(Debug, Clone)]
@@ -21,7 +21,7 @@ where
 {
     fn new_component(
         &self,
-        req: crate::ports::component_port::NewComponentRequest,
+        req: NewComponentRequest,
     ) -> impl Future<Output = Result<Component, ComponentApplicationError>> + Send {
         async move {
             todo!()
@@ -31,7 +31,7 @@ where
     fn new_sub_component(
         &self,
         parent: ItemId,
-        req: crate::ports::component_port::NewComponentRequest,
+        req: NewComponentRequest,
     ) -> impl Future<Output = Result<Component, ComponentApplicationError>> + Send {
         async move {
             todo!()

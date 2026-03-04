@@ -1,6 +1,4 @@
-use crate::domain::{function, item::ItemIdError};
-
-use super::item::{Item, ItemId};
+use super::item::{Item, ItemId, ItemIdError};
 
 #[derive(Debug)]
 pub struct Component {

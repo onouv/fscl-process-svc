@@ -9,13 +9,12 @@ use axum::{extract::State, http::StatusCode, response::Json};
 
 use super::requests::CreateComponentHttpRequestBody;
 use super::responses::CreateComponentResponse;
-
 pub async fn create_component<C>(
     State(state): State<AppState<C>>,
     Json(request): Json<CreateComponentHttpRequestBody>,
 ) -> Result<ApiSuccess<CreateComponentResponse>, ApiError>
 where
-    C: ComponentPort + Send + Sync + 'static,
+    C: ComponentPort
 {
     let application_req = NewComponentRequest::new(
         request.id,

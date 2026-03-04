@@ -5,12 +5,12 @@ use thiserror::Error;
 
 pub(crate) enum ComponentApplicationError {
     ItemIdDuplicate { id: ItemId },
-    NoSuchItemId,
-    NoSuchParentId,
+    NoSuchItemId { id: ItemId },
+    NoSuchParentId { id: ItemId },
     Unknown,
 }
 
-// TODO: move this to a hogher place, maybe item.rs
+
 #[derive(Debug, Clone, Error)]
 pub(crate) enum RequestBuildError {
     InvalidItemId(ItemIdError),

@@ -1,4 +1,4 @@
-use super::item::{Item, ItemId, ItemIdError};
+use super::item::{Item, ItemId};
 
 #[derive(Debug)]
 pub struct Component {
@@ -10,16 +10,15 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new(id: &str, name: &str, description: &str) -> Result<Self, ItemIdError> {
-        let item_id = ItemId::new(String::from(id))?;
+    pub fn new(id: ItemId, name: &str, description: &str) -> Self {
 
-        Ok(Component {
-            id: item_id,
+        Component {
+            id,
             name: name.to_string(),
             description: description.to_string(),
             subs: Vec::new(),
             implementers: Vec::new(),
-        })
+        }
     }
 }
 

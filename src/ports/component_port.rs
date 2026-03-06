@@ -72,13 +72,8 @@ impl NewComponentRequest {
 }
 
 pub trait ComponentPort: Clone + Send + Sync + 'static {
-    fn new_component(
+    async fn new_component(
         &self,
-        req: NewComponentRequest,
-    ) -> impl Future<Output = Result<Component, ComponentApplicationError>> + Send;
-    fn new_sub_component(
-        &self,
-        parent: ItemId,
         req: NewComponentRequest,
     ) -> impl Future<Output = Result<Component, ComponentApplicationError>> + Send;
 }

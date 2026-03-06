@@ -1,16 +1,16 @@
-use super::item::{Item, ItemId};
+use super::item::{Resource, ResourceId};
 
 #[derive(Debug)]
 pub struct Component {
-    pub id: ItemId,
+    pub id: ResourceId,
     pub name: String,
     pub description: String,
-    subs: Vec<ItemId>,
-    implementers: Vec<ItemId>,
+    subs: Vec<ResourceId>,
+    implementers: Vec<ResourceId>,
 }
 
 impl Component {
-    pub fn new(id: ItemId, name: &str, description: &str) -> Self {
+    pub fn new(id: ResourceId, name: &str, description: &str) -> Self {
 
         Component {
             id,
@@ -22,8 +22,8 @@ impl Component {
     }
 }
 
-impl Item for Component {
-    fn id(&self) -> ItemId {
+impl Resource for Component {
+    fn id(&self) -> ResourceId {
         self.id.clone()
     }
 }

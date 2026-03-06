@@ -1,12 +1,12 @@
 use std::fmt::Display;
 
-use crate::domain::{component::Component, item::{ItemId, ItemIdError}};
+use crate::domain::{component::Component, item::{ResourceId, ItemIdError}};
 use thiserror::Error;
 
 pub(crate) enum ComponentApplicationError {
-    ItemIdDuplicate { id: ItemId },
-    NoSuchItemId { id: ItemId },
-    NoSuchParentId { id: ItemId },
+    ItemIdDuplicate { id: ResourceId },
+    NoSuchItemId { id: ResourceId },
+    NoSuchParentId { id: ResourceId },
     Unknown,
 }
 
@@ -34,10 +34,10 @@ impl Display for RequestBuildError {
 
 #[derive(Clone)]
 pub struct NewComponentRequest {
-    pub id: ItemId,
+    pub id: ResourceId,
     pub name: String,
     pub description: Option<String>,
-    pub parent_id: Option<ItemId>,
+    pub parent_id: Option<ResourceId>,
 }
 
 impl NewComponentRequest {
@@ -47,7 +47,7 @@ impl NewComponentRequest {
         description: Option<String>,
         parent_id: Option<String>,
     ) -> Result<Self, RequestBuildError> {
-        let id = match ItemId::new(item_id) {
+        let id = match ResourceId::new(item_id) {
             Ok(id) => id,
             Err(e) => {
                 return Err(RequestBuildError::InvalidItemId(e));
@@ -55,7 +55,7 @@ impl NewComponentRequest {
         };
 
         let parent_id = match parent_id {
-            Some(p) => match ItemId::new(p) {
+            Some(p) => match ResourceId::new(p) {
                 Ok(id) => Some(id),
                 Err(e) => return Err(RequestBuildError::InvalidParentId(e)),
             },

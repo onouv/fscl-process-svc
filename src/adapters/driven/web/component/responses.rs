@@ -1,6 +1,6 @@
 use axum::{http::StatusCode, response::IntoResponse};
 
-use crate::{adapters::driven::web::responses::ApiSuccess, domain::{Component, Item}};
+use crate::{adapters::driven::web::responses::ApiSuccess, domain::{Component, Resource}};
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 pub(crate) struct CreateComponentResponse {

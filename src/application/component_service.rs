@@ -1,6 +1,6 @@
 use crate::{
     adapters::driving::db::component_repository::ComponentRepository,
-    domain::{component::Component, item::ItemId},
+    domain::{component::Component, item::ResourceId},
     ports::{ComponentApplicationError, ComponentPort, NewComponentRequest},
 };
 
@@ -37,7 +37,7 @@ where
 
     async fn new_sub_component(
         &self,
-        parent: ItemId,
+        parent: ResourceId,
         req: NewComponentRequest,
     ) -> Result<Component, ComponentApplicationError>{
         todo!() 
@@ -52,13 +52,17 @@ where
         &self,
         req: NewComponentRequest,
     ) -> impl Future<Output = Result<Component, ComponentApplicationError>> + Send {
-        // if parent_id is Some, then we are meant to be a sub-component
-        let v = if let Some(parent_id) = req.parent_id {
-            self.new_sub_component(parent_id, req)
-        } else {
-            self.new_top_level_component(req)
-        };
 
-        v
+    async move {
+        if self.repo.exist_item(req.id.clone()).await? {
+            return Err(ComponentApplicationError::ComponentAlreadyExists(req.id));
+        }
+
+
+    }       
+
+        // if parent_id is Some, then we are meant to be a sub-component
+        
     }
+
 }

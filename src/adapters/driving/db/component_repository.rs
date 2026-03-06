@@ -1,20 +1,14 @@
-use crate::{adapters::driving::db::error::RepositoryError, domain::{component::Component}};
-
+use crate::domain::{ResourceId, component::Component};
 use super::{
     repository::Repository,
-    seaorm_repository::SeaOrmRepository,
-
+    error::RepositoryError
 };
 
-pub trait ComponentRepository: Repository<Component> {}
-
-
-impl Repository<Component> for SeaOrmRepository {
-    fn save(&self, item: &Component) -> impl Future<Output = Result<(), RepositoryError>> + Send {
-        async move {
-            todo!()
-        }
-    }
+pub trait ComponentRepository: Repository<Component> {
+    async fn load(&self, id: &ResourceId) -> Result<Option<Component>, RepositoryError>;
+    async fn save(&self, item: &Component) -> Result<(), RepositoryError>;
 }
 
-impl ComponentRepository for SeaOrmRepository {}
+
+
+

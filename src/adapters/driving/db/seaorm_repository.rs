@@ -5,10 +5,11 @@ use sea_orm::{
 use dotenv::dotenv;
 use std::env;
 
-use crate::{adapters::driving::db::ItemRepository, domain::item::ItemId};
-
+use crate::{adapters::driving::db::models, domain::{ResourceId, component::Component}};
 use super::{
     error::RepositoryError,
+    ComponentRepository,
+    ItemRepository,
     models::{function, component, component_implements_function}
 };
 
@@ -61,15 +62,31 @@ impl SeaOrmRepository {
 
 impl ItemRepository for SeaOrmRepository {
 
-    fn exist_item(id: ItemId) -> impl Future<Output = Result<bool, RepositoryError>> + Send {
+    fn exist_item(id: ResourceId) -> impl Future<Output = Result<bool, RepositoryError>> + Send {
         async {
             todo!()
         }
     }
 }
 
-/*
+
 impl ComponentRepository for SeaOrmRepository { 
+    async fn load(&self, id: &ResourceId) -> impl Future<Output = Result<Option<Component>, RepositoryError>> + Send {
+       let id = id.as_string();
+
+       Ok(models::component::Entity::find_by_id(id)
+        .one(&self.db)       
+       .await?)
+    }
+
+    async fn save(&self, item: &Component) -> impl Future<Output = Result<(), RepositoryError>> + Send {
+        
+            async move {
+                todo!();
+            }
+    }
+}
+/*
    create_function(
         &self,
         id: &str,
@@ -149,7 +166,9 @@ impl ComponentRepository for SeaOrmRepository {
             .all(&self.db)
             .await?)
     }
+*/
 
+/*
     // ===== Component Operations =====
 
     pub async fn create_component(

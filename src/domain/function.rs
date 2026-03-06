@@ -1,19 +1,19 @@
 use crate::domain::ItemIdError;
 
-use super::item::{Item, ItemId};
+use super::item::{Resource, ResourceId};
 
 #[derive(Debug)]
 pub struct Function {
-    pub id: ItemId,
+    pub id: ResourceId,
     pub name: String,
     pub description: String,
-    subs: Vec<ItemId>,
-    implements: Vec<ItemId>,
+    subs: Vec<ResourceId>,
+    implements: Vec<ResourceId>,
 }
 
 impl Function {
     pub fn new(id: &str, name: &str, description: &str) -> Result<Self, ItemIdError> {
-        let item_id = ItemId::new(String::from(id))?;
+        let item_id = ResourceId::new(String::from(id))?;
         
         Ok(Function {
             id: item_id, 
@@ -25,8 +25,8 @@ impl Function {
     }
 }
 
-impl Item for Function {
-    fn id(&self) -> ItemId {
+impl Resource for Function {
+    fn id(&self) -> ResourceId {
         self.id.clone()
     }
 }

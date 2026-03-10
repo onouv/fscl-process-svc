@@ -9,8 +9,7 @@ use crate::{adapters::driving::db::models, domain::{ResourceId, component::Compo
 use super::{
     error::RepositoryError,
     ComponentRepository,
-    ItemRepository,
-    models::{function, component, component_implements_function}
+    repository::Repository,
 };
 
 fn get_database_url() -> String {
@@ -60,31 +59,39 @@ impl SeaOrmRepository {
     // ===== Function Operations =====
 }
 
-impl ItemRepository for SeaOrmRepository {
+impl Repository<Component> for SeaOrmRepository {
+    fn load(&self, id: &ResourceId) -> impl std::future::Future<Output = Result<Option<Component>, RepositoryError>> + Send {
+        let db = self.db.clone();
+        let id = id.as_str().to_string();
 
-    fn exist_item(id: ResourceId) -> impl Future<Output = Result<bool, RepositoryError>> + Send {
-        async {
-            todo!()
+        async move {
+            let db_component = models::component::Entity::find_by_id(id)
+                .one(&db)
+                .await?;
+
+            match db_component {
+                Some(model) => {
+                    let resource_id = ResourceId::new(model.id)
+                        .map_err(|e| RepositoryError::Unknown(e.to_string()))?;
+                    Ok(Some(Component::new(resource_id, &model.name, &model.description)))
+                }
+                None => Ok(None),
+            }
+        }
+    }
+
+    fn save(&self, item: &Component) -> impl std::future::Future<Output = Result<(), RepositoryError>> + Send {
+        let _db = self.db.clone();
+        let _id = item.id.as_str().to_string();
+
+        async move {
+            todo!();
         }
     }
 }
 
 
 impl ComponentRepository for SeaOrmRepository { 
-    async fn load(&self, id: &ResourceId) -> impl Future<Output = Result<Option<Component>, RepositoryError>> + Send {
-       let id = id.as_string();
-
-       Ok(models::component::Entity::find_by_id(id)
-        .one(&self.db)       
-       .await?)
-    }
-
-    async fn save(&self, item: &Component) -> impl Future<Output = Result<(), RepositoryError>> + Send {
-        
-            async move {
-                todo!();
-            }
-    }
 }
 /*
    create_function(

@@ -1,4 +1,4 @@
-use axum::{http::StatusCode, response::IntoResponse};
+use axum::{Json, http::StatusCode, response::IntoResponse};
 
 use crate::{adapters::driven::web::responses::ApiSuccess, domain::{Component, Resource}};
 
@@ -13,8 +13,8 @@ impl From<&Component> for CreateComponentResponse {
     }
 } 
 
-impl IntoResponse for ApiSuccess<CreateComponentResponse> {
+/* impl IntoResponse for ApiSuccess<CreateComponentResponse> {
     fn into_response(self) -> axum::response::Response {
-        self.into_response()
+        todo!(); //(StatusCode::CREATED, Json(self)).into_response()
     }
-}
+} */

@@ -1,5 +1,5 @@
 use crate::{
-    adapters::driving::db::component_repository::ComponentRepository,
+    adapters::driving::db::ComponentRepository,
     domain::{component::Component, item::ResourceId},
     ports::{ComponentApplicationError, ComponentPort, NewComponentRequest},
 };
@@ -24,23 +24,21 @@ where
         &self,
         req: NewComponentRequest,
     ) -> Result<Component, ComponentApplicationError> {
-
         let component = Component::new(
             req.id,
             req.name.as_str(),
             req.description.as_deref().unwrap_or(""),
         );
 
-        Ok(component) 
+        Ok(component)
     }
-    
 
     async fn new_sub_component(
         &self,
         parent: ResourceId,
         req: NewComponentRequest,
-    ) -> Result<Component, ComponentApplicationError>{
-        todo!() 
+    ) -> Result<Component, ComponentApplicationError> {
+        todo!()
     }
 }
 
@@ -48,21 +46,27 @@ impl<R> ComponentPort for ComponentService<R>
 where
     R: ComponentRepository + Send + Sync + 'static,
 {
-    async fn new_component(
+    fn new_component(
         &self,
         req: NewComponentRequest,
     ) -> impl Future<Output = Result<Component, ComponentApplicationError>> + Send {
+        async move {
+            let component = match self.repo.load(&req.id).await {
+                Ok(comp) => comp,
+                Err(e) => {
+                    println!("Error loading component with id {}: {:?}", req.id, e);
+                    return Err(ComponentApplicationError::Unknown);
+                }
+            };
 
-    async move {
-        if self.repo.exist_item(req.id.clone()).await? {
-            return Err(ComponentApplicationError::ComponentAlreadyExists(req.id));
+            if component.is_some() {
+                return Err(ComponentApplicationError::ItemIdDuplicate{ id: req.id});
+            }
+
+            // TODO: if parent_id is Some, then we are meant to be a sub-component
+
+
+            Ok(Component::new(req.id, req.name.as_str(), req.description.as_deref().unwrap_or("")))
         }
-
-
-    }       
-
-        // if parent_id is Some, then we are meant to be a sub-component
-        
     }
-
 }

@@ -1,4 +1,5 @@
 
+#![allow(unused, clippy::manual_async_fn)]
 mod domain;
 mod ports;
 mod adapters;
@@ -12,7 +13,7 @@ use adapters::{
     driven::web::http_server::HttpServer,
 };
 
-use crate::adapters::driven::web::http_server::HttpServerConfig;
+use crate::{adapters::{driven::web::http_server::HttpServerConfig, driving::db::seaorm_repository::SeaOrmRepository}, application::component_service::ComponentService};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -26,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
         ip: std::net::SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::LOCALHOST), 3100),
     };
 
-    let server = HttpServer::new(cfg, component_service).await?;
+    let server = HttpServer::new::<ComponentService<SeaOrmRepository>>(cfg, component_service).await?;
 
     server.run().await
 } 

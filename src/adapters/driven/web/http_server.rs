@@ -22,30 +22,33 @@ pub struct HttpServer {
 }
 
 impl HttpServer {
-    pub async fn new(
+    pub async fn new<C>(
         cfg: HttpServerConfig,
-        component_service: impl ComponentPort,
-    ) -> anyhow::Result<Self> {
+        component_service: C 
+    ) -> anyhow::Result<Self> 
+    where 
+        C: ComponentPort + Send + Sync + 'static,
+    {
         let state = AppState {
             component_service: Arc::new(component_service),
         };
 
-        let component_routes = Router::new()
+        let component_routes = Router::<AppState<C>>::new()
             .route("/", get(get_all_components))
             .route("/{id}", get(get_component))
-            .route("/", post(create_component));
+            .route("/", post(create_component::<C>));
 
-        let function_routes = Router::new()
+        let function_routes = Router::<AppState<C>>::new()
             .route("/", get(|| async {}))
             .route("/{id}", get(|| async {}))
             .route("/", post(|| async {}));
 
-        let api_routes = Router::new()
+        let api_routes = Router::<AppState<C>>::new()
             .nest("/component", component_routes)
             .nest("/function", function_routes);
 
 
-        let router = Router::new().nest("/api/v2", api_routes).with_state(state);
+        let router = Router::<AppState<C>>::new().nest("/api/v2", api_routes).with_state(state);
 
 
         /*let app = Router::new()

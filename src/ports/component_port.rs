@@ -21,10 +21,10 @@ impl Display for RequestBuildError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidItemId(error) => {
-                return write!(f, "Invalid item id {}", error);
+                write!(f, "Invalid item id {}", error)
             }
             Self::InvalidParentId(error) => {
-                return write!(f, "Invalid parent id {}", error);
+                write!(f, "Invalid parent id {}", error)
             }
         }
     }
@@ -72,8 +72,8 @@ impl NewComponentRequest {
 }
 
 pub trait ComponentPort: Clone + Send + Sync + 'static {
-    async fn new_component(
+    fn new_component(
         &self,
         req: NewComponentRequest,
-    ) -> impl Future<Output = Result<Component, ComponentApplicationError>> + Send;
+    ) -> impl std::future::Future<Output = Result<Component, ComponentApplicationError>> + Send;
 }

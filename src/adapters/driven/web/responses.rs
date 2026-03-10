@@ -54,12 +54,12 @@ impl IntoResponse for ApiError {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct ApiResponseBody<T: Serialize + PartialEq> {
+pub struct ApiResponseBody<T: Serialize> {
     status_code: u16,
     data: T,
 }
 
-impl<T: Serialize + PartialEq> ApiResponseBody<T> {
+impl<T: Serialize> ApiResponseBody<T> {
     fn new(status: StatusCode, data: T) -> Self {
         Self {
             status_code: status.as_u16(),
@@ -85,20 +85,21 @@ impl<T: Serialize + PartialEq> ApiSuccess<T> {
     }
 }
 
-impl<T: Serialize + PartialEq> IntoResponse for ApiSuccess<ApiResponseBody<T>> {
+impl<T: Serialize + PartialEq> IntoResponse for ApiSuccess<T> {
     fn into_response(self) -> Response<Body> {
         (self.0, self.1).into_response()
     }
-}
+} 
+
 
 impl From<RequestBuildError> for ApiError {
     fn from(value: RequestBuildError) -> Self {
         match value {
             RequestBuildError::InvalidItemId(e) => {
-                ApiError::CannotProcessItem(format!("invalid item id: {}", e.to_string()))
+                ApiError::CannotProcessItem(format!("invalid item id: {}", e))
             }
             RequestBuildError::InvalidParentId(e) => {
-                ApiError::CannotProcessItem(format!("invalid parent id: {}", e.to_string()))
+                ApiError::CannotProcessItem(format!("invalid parent id: {}", e))
             }
         }
     }

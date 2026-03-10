@@ -13,8 +13,3 @@ impl From<&Component> for CreateComponentResponse {
     }
 } 
 
-/* impl IntoResponse for ApiSuccess<CreateComponentResponse> {
-    fn into_response(self) -> axum::response::Response {
-        todo!(); //(StatusCode::CREATED, Json(self)).into_response()
-    }
-} */

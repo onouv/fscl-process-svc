@@ -1,6 +1,6 @@
 use crate::{
     adapters::driving::db::ComponentRepository,
-    domain::{component::Component, item::ResourceId},
+    domain::{component::Component, resource::ResourceId},
     ports::{ComponentApplicationError, ComponentPort, NewComponentRequest},
 };
 
@@ -60,7 +60,7 @@ where
             };
 
             if component.is_some() {
-                return Err(ComponentApplicationError::ItemIdDuplicate{ id: req.id});
+                return Err(ComponentApplicationError::ResourceIdDuplicate{ id: req.id});
             }
 
             // TODO: if parent_id is Some, then we are meant to be a sub-component

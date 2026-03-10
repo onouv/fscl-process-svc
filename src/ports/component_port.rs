@@ -1,11 +1,11 @@
 use std::fmt::Display;
 
-use crate::domain::{component::Component, item::{ResourceId, ItemIdError}};
+use crate::domain::{component::Component, resource::{ResourceId, ResourceIdError}};
 use thiserror::Error;
 
 pub(crate) enum ComponentApplicationError {
-    ItemIdDuplicate { id: ResourceId },
-    NoSuchItemId { id: ResourceId },
+    ResourceIdDuplicate { id: ResourceId },
+    NoSuchResourceId { id: ResourceId },
     NoSuchParentId { id: ResourceId },
     Unknown,
 }
@@ -13,15 +13,15 @@ pub(crate) enum ComponentApplicationError {
 
 #[derive(Debug, Clone, Error)]
 pub(crate) enum RequestBuildError {
-    InvalidItemId(ItemIdError),
-    InvalidParentId(ItemIdError),
+    InvalidId(ResourceIdError),
+    InvalidParentId(ResourceIdError),
 }
 
 impl Display for RequestBuildError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InvalidItemId(error) => {
-                write!(f, "Invalid item id {}", error)
+            Self::InvalidId(error) => {
+                write!(f, "Invalid id {}", error)
             }
             Self::InvalidParentId(error) => {
                 write!(f, "Invalid parent id {}", error)
@@ -42,15 +42,15 @@ pub struct NewComponentRequest {
 
 impl NewComponentRequest {
     pub(crate) fn new(
-        item_id: String,
+        id: String,
         name: String,
         description: Option<String>,
         parent_id: Option<String>,
     ) -> Result<Self, RequestBuildError> {
-        let id = match ResourceId::new(item_id) {
+        let id = match ResourceId::new(id) {
             Ok(id) => id,
             Err(e) => {
-                return Err(RequestBuildError::InvalidItemId(e));
+                return Err(RequestBuildError::InvalidId(e));
             }
         };
 

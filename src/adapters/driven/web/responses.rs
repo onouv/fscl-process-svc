@@ -10,7 +10,7 @@ use crate::ports::{ComponentApplicationError, RequestBuildError};
 
 pub enum ApiError {
     InternalServerError(String),
-    CannotProcessItem(String),
+    CannotProcessResource(String),
     Conflict(String),
 }
 
@@ -20,34 +20,34 @@ impl IntoResponse for ApiError {
 
         match self {
             InternalServerError(e) => {
-                return (
+                (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(ApiResponseBody::new_error(
                         StatusCode::INTERNAL_SERVER_ERROR,
                         "internal server error".to_string(),
                     )),
                 )
-                    .into_response();
+                    .into_response()
             }
-            CannotProcessItem(e) => {
-                return (
+            CannotProcessResource(e) => {
+                (
                     StatusCode::UNPROCESSABLE_ENTITY,
                     Json(ApiResponseBody::new_error(
                         StatusCode::UNPROCESSABLE_ENTITY,
                         "entity cannot be processed".to_string(),
                     )),
                 )
-                    .into_response();
+                    .into_response()
             }
             Conflict(e) => {
-                return (
+                (
                     StatusCode::CONFLICT,
                     Json(ApiResponseBody::new_error(
                         StatusCode::CONFLICT,
                         "Entity conflicts with server state".to_string(),
                     )),
                 )
-                    .into_response();
+                    .into_response()
             }
         }
     }
@@ -95,11 +95,11 @@ impl<T: Serialize + PartialEq> IntoResponse for ApiSuccess<T> {
 impl From<RequestBuildError> for ApiError {
     fn from(value: RequestBuildError) -> Self {
         match value {
-            RequestBuildError::InvalidItemId(e) => {
-                ApiError::CannotProcessItem(format!("invalid item id: {}", e))
+            RequestBuildError::InvalidId(e) => {
+                ApiError::CannotProcessResource(format!("invalid resource id: {}", e))
             }
             RequestBuildError::InvalidParentId(e) => {
-                ApiError::CannotProcessItem(format!("invalid parent id: {}", e))
+                ApiError::CannotProcessResource(format!("invalid parent id: {}", e))
             }
         }
     }
@@ -108,14 +108,14 @@ impl From<RequestBuildError> for ApiError {
 impl From<ComponentApplicationError> for ApiError {
     fn from(value: ComponentApplicationError) -> Self {
         match value {
-            ComponentApplicationError::ItemIdDuplicate { id } => {
-                ApiError::Conflict(format!("duplicate item with id {}", id.to_string()))
+            ComponentApplicationError::ResourceIdDuplicate { id } => {
+                ApiError::Conflict(format!("duplicate resource with id {}", id))
             }
-            ComponentApplicationError::NoSuchItemId { id } => {
-                ApiError::CannotProcessItem(format!("no such item with id {}", id.to_string()))
+            ComponentApplicationError::NoSuchResourceId { id } => {
+                ApiError::CannotProcessResource(format!("no such resource with id {}", id))
             }
             ComponentApplicationError::NoSuchParentId { id } => {
-                ApiError::CannotProcessItem(format!("no such item with id {}", id.to_string()))
+                ApiError::CannotProcessResource(format!("no such resource with id {}", id))
             }
             ComponentApplicationError::Unknown => {
                 ApiError::InternalServerError("Unknown error".to_string())

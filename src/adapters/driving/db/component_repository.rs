@@ -4,10 +4,7 @@ use super::{
     //error::RepositoryError
 };
 
-pub trait ComponentRepository: Repository<Component> {
-    //async fn load(&self, id: &ResourceId) -> Result<Option<Component>, RepositoryError>;
-    //async fn save(&self, item: &Component) -> Result<(), RepositoryError>;
-}
+pub trait ComponentRepository: Repository<Component> {}
 
 
 

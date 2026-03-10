@@ -1,4 +1,4 @@
-use super::item::{Resource, ResourceId};
+use super::resource::{Resource, ResourceId};
 
 #[derive(Debug)]
 pub struct Component {

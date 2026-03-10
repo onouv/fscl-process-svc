@@ -1,2 +1,1 @@
-pub(super) mod application_service;
-pub mod component_service;
+pub(crate) mod component_service;

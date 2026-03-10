@@ -1,6 +1,6 @@
-use crate::domain::ItemIdError;
+use crate::domain::ResourceIdError;
 
-use super::item::{Resource, ResourceId};
+use super::resource::{Resource, ResourceId};
 
 #[derive(Debug)]
 pub struct Function {
@@ -12,11 +12,11 @@ pub struct Function {
 }
 
 impl Function {
-    pub fn new(id: &str, name: &str, description: &str) -> Result<Self, ItemIdError> {
-        let item_id = ResourceId::new(String::from(id))?;
+    pub fn new(id: &str, name: &str, description: &str) -> Result<Self, ResourceIdError> {
+        let resource_id = ResourceId::new(String::from(id))?;
         
         Ok(Function {
-            id: item_id, 
+            id: resource_id, 
             name: name.to_string(),
             description: description.to_string(),
             subs: Vec::new(),

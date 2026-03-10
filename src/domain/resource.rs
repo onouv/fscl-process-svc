@@ -9,16 +9,12 @@ pub trait Resource {
 pub struct ResourceId(String);
 
 impl ResourceId {
-    pub fn new(id: String) -> Result<Self, ItemIdError> {
+    pub fn new(id: String) -> Result<Self, ResourceIdError> {
         if id.is_empty() {
-            return Err(ItemIdError::ItemIdEmpty);
+            return Err(ResourceIdError::ResourceIdEmpty);
         }
 
         Ok(Self(id))
-    }
-
-    pub fn to_string(&self) -> String {
-        self.0.clone()
     }
 
     pub fn as_str(&self) -> &str {
@@ -27,8 +23,8 @@ impl ResourceId {
 }
 
 #[derive(Debug, Clone, Error)]
-pub enum ItemIdError {
-    ItemIdEmpty,
+pub enum ResourceIdError {
+    ResourceIdEmpty,
     // There will more parsing errors...
 }
 
@@ -38,10 +34,10 @@ impl Display for ResourceId {
     }
 }
 
-impl Display for ItemIdError {
+impl Display for ResourceIdError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let result = match self {
-            ItemIdError::ItemIdEmpty => "Empty id string."
+            ResourceIdError::ResourceIdEmpty => "Empty id string."
         }; 
         
         write!(f, "{}", result)

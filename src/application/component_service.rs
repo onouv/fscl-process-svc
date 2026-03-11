@@ -54,17 +54,21 @@ where
             let component = match self.repo.load(&req.id).await {
                 Ok(comp) => comp,
                 Err(e) => {
-                    println!("Error loading component with id {}: {:?}", req.id, e);
+                    log::error!("Error loading component with id {}: {:?}", req.id, e);
+                    
                     return Err(ComponentApplicationError::Unknown);
                 }
             };
 
             if component.is_some() {
+                log::info!("encountered duplicate resource with id {}", req.id);
+
                 return Err(ComponentApplicationError::ResourceIdDuplicate{ id: req.id});
             }
 
             // TODO: if parent_id is Some, then we are meant to be a sub-component
 
+            log::trace!("creating new component: (id: {}, name: {})", req.id, req.name);
 
             Ok(Component::new(req.id, req.name.as_str(), req.description.as_deref().unwrap_or("")))
         }

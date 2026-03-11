@@ -43,9 +43,15 @@ impl HttpServer {
             .route("/{id}", get(|| async {}))
             .route("/", post(|| async {}));
 
+        let test_routes = Router::<AppState<C>>::new()
+            .route("/", get(root))
+            .route("/foo", get(get_foo))
+            .route("/bar", get(get_bar));
+
         let api_routes = Router::<AppState<C>>::new()
             .nest("/component", component_routes)
-            .nest("/function", function_routes);
+            .nest("/function", function_routes)
+            .nest("/test", test_routes);
 
 
         let router = Router::<AppState<C>>::new().nest("/api/v2", api_routes).with_state(state);
@@ -69,22 +75,21 @@ impl HttpServer {
 }
 // which calls one of these handlers
 async fn root() {
-    println!("Hello world!");
+    log::trace!("Hello world!");
 }
+
 async fn get_foo() {
-    println!("Getting foo...");
+    log::trace!("Getting foo...");
 }
-async fn post_foo() {
-    println!("Posting foo...");
-}
-async fn foo_bar() {
-    println!("Getting foo bar...");
+
+async fn get_bar() {
+    log::trace!("Getting bar...");
 }
 
 async fn get_all_components() {
-    println!("Get all components...");
+    log::trace!("Get all components...");
 }
 
 async fn get_component(Json(id): Json<u64>) {
-    println!("Getting component for id {}", id);
+    log::trace!("Getting component for id {}", id);
 }

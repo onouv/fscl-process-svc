@@ -16,8 +16,8 @@ fn get_database_url() -> String {
     dotenv().ok();
     let db_type = env::var("DB_TYPE").unwrap_or_else(|_| "postgres".to_string());
     let db_host = env::var("DB_HOST").unwrap_or_else(|_| "localhost".to_string());
-    let db_user = env::var("DB_USER").unwrap_or_else(|_| "postgres".to_string());
-    let db_password = env::var("DB_PASSWORD").unwrap_or_else(|_| "postgres".to_string());
+    let db_user = env::var("DB_USER").unwrap_or_else(|_| "fscl".to_string());
+    let db_password = env::var("DB_PASSWORD").unwrap_or_else(|_| "fscl".to_string());
     let db_name = env::var("DB_NAME").unwrap_or_else(|_| "process_svc".to_string());
 
     format!("{}://{}:{}@{}/{}", db_type, db_user, db_password, db_host, db_name)
@@ -55,8 +55,6 @@ impl SeaOrmRepository {
         };
         Self { db }
     }
-
-    // ===== Function Operations =====
 }
 
 impl Repository<Component> for SeaOrmRepository {

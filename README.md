@@ -33,10 +33,14 @@ PostgreSQL 12+
 ## Setup
 ### Database Setup
 
-Assuming a postgres server is running on localhost: 
+```bash
+# from project root folder
+docker compose --env-file .env -f ./docker/compose.yaml up
+```
+Assuming a postgres server is now running on localhost: 
 
 ```bash
->> psql -H localhost -P 5432 -U postgres
+>> psql -h localhost -p 5432 -U postgres
 postgres=# create database process_svc
 ...
 postgres=# \c process_svc
@@ -44,7 +48,7 @@ postgres=# \c process_svc
 
 Paste the following into the psql commandline:
 ```sql
--- Create tables (manual or via migrations)
+-- Create tables (manual or via migrations):w
 CREATE TABLE functions (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -87,17 +91,19 @@ Modify entries in `.env`
 # Build and run
 cargo build --release
 cargo run --release
-
-# Server listens on http://0.0.0.0:8080
 ```
+or apply log flags
 
+```bash 
+RUST_LOG=trace cargo run
+``` 
 ## Example Usage
 
 ### Create a Component
 ```bash
-curl -X POST http://localhost:8080/api/v1/process/components \
+curl -X POST http://localhost:3100/api/v2/components \
   -H "Content-Type: application/json" \
-  -d '{"id": "C100", "name": "Door Lock" }'
+  -d '{"id": "100", "name": "Door Lock" }'
 ```
 
 

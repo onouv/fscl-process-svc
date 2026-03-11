@@ -31,6 +31,20 @@ PostgreSQL 12+
 
 
 ## Setup
+
+### Environment
+
+The system checks for a `.env` file in the project root folder to find certain configuration variables. These values are needed for the dataase layer including the docker setup of the database. After cloning the project, you need to set one up:
+
+```bash
+#.env 
+# variables are mandatory, values given are a dev default
+DB_TYPE=postgres
+DB_HOST=localhost
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=postgres
+```
 ### Database Setup
 
 ```bash

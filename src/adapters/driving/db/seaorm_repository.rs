@@ -1,9 +1,11 @@
 use sea_orm::{
    Database, prelude::*
 };
+use sea_orm_migration::MigratorTrait;
 
 use dotenv::dotenv;
 use std::env;
+use migration::Migrator;
 
 use crate::{adapters::driving::db::models, domain::{ResourceId, component::Component}};
 use super::{
@@ -37,23 +39,25 @@ pub struct SeaOrmRepository {
 }
 
 impl SeaOrmRepository {
-    pub async fn new() -> Self {
+    pub async fn new() -> Result<Self, RepositoryError> {
         // Database URL from environment or use default
         let database_url = get_database_url();
         log::info!("Connecting to database: {}", database_url);
 
         // Connect to database
-        let db = match Database::connect(&database_url).await {
-            Ok(db) => {
-                log::info!("✓ Connected to database");
-                db
-            }
-            Err(err) => {
-                log::error!("✗ Failed to connect to database: {}", err);
-                std::process::exit(1);
-            }
-        };
-        Self { db }
+        let db = Database::connect(&database_url).await.map_err(|err| {
+            log::error!("✗ Failed to connect to database: {}", err);
+            RepositoryError::DbError(err.to_string())
+        })?;
+        log::info!("✓ Connected to database");
+
+        Migrator::up(&db, None).await.map_err(|err| {
+            log::error!("✗ Failed to run migrations: {}", err);
+            RepositoryError::DbError(err.to_string())
+        })?;
+        log::info!("✓ Migrations applied");
+
+        Ok(Self { db })
     }
 }
 

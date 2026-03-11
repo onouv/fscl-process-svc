@@ -37,57 +37,19 @@ PostgreSQL 12+
 # from project root folder
 docker compose --env-file .env -f ./docker/compose.yaml up
 ```
-Assuming a postgres server is now running on localhost: 
+Assuming a postgres server is now running on localhost, observe that an empty db has been started: 
 
 ```bash
->> psql -h localhost -p 5432 -U postgres
-postgres=# create database process_svc
-...
-postgres=# \c process_svc
+psql -h localhost -p 5432 -U postgres
+postgres=# \d
+Did not find any relations.
+postgres=# 
 ```
 
-Paste the following into the psql commandline:
-```sql
--- Create tables (manual or via migrations):w
-CREATE TABLE functions (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT NOT NULL,
-  parent_id TEXT REFERENCES functions(id) ON DELETE CASCADE,
-  version INT NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-
-CREATE TABLE components (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT NOT NULL,
-  parent_id TEXT REFERENCES components(id) ON DELETE CASCADE,
-  version INT NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-
-CREATE TABLE component_implements_function (
-  id TEXT PRIMARY KEY,
-  component_id TEXT NOT NULL REFERENCES components(id) ON DELETE CASCADE,
-  function_id TEXT NOT NULL REFERENCES functions(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL,
-  UNIQUE(component_id, function_id)
-);
-
-CREATE INDEX idx_functions_parent_created ON functions(parent_id, created_at);
-CREATE INDEX idx_components_parent_created ON components(parent_id, created_at);
-CREATE INDEX idx_impl_component ON component_implements_function(component_id);
-```
+Note: the system will initialize the database by executing a sea-orm migration on startup.
 
 ## Run
 ```bash
-# Set database URL
-Modify entries in `.env`
-
-
 # Build and run
 cargo build --release
 cargo run --release

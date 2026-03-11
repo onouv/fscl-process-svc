@@ -19,7 +19,7 @@ use crate::{adapters::{driven::web::http_server::HttpServerConfig, driving::db::
 async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let repo = seaorm_repository::SeaOrmRepository::new().await;
+    let repo = seaorm_repository::SeaOrmRepository::new().await?;
     let component_service = application::component_service::ComponentService::new(repo);
 
     // Start HTTP server

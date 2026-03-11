@@ -1,4 +1,4 @@
 /target
 .env
 /.vscode
-/.db-data
+/db-data

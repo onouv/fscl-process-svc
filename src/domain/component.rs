@@ -1,4 +1,4 @@
-use super::resource::{Resource, ResourceId};
+use fscl_core::{Resource, ResourceId};
 
 #[derive(Debug)]
 pub struct Component {

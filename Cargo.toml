@@ -8,6 +8,7 @@ edition = "2024"
 members = ["migration"]
 
 [dependencies]
+fscl-core = { path = "../fscl-core" }
 migration = { path = "migration" }
 fmt = "0.1.0"
 sea-orm = { version = "1.1.19", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }

@@ -1,6 +1,6 @@
-use crate::domain::ResourceIdError;
+use fscl_core::ResourceIdError;
 
-use super::resource::{Resource, ResourceId};
+use fscl_core::{Resource, ResourceId};
 
 #[derive(Debug)]
 pub struct Function {

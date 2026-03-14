@@ -1,6 +1,6 @@
 use std::fmt::Display;
-
-use crate::domain::{component::Component, resource::{ResourceId, ResourceIdError}};
+use fscl_core::{ResourceId, ResourceIdError};
+use crate::domain:: component::Component;
 use thiserror::Error;
 
 pub(crate) enum ComponentApplicationError {

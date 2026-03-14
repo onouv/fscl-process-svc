@@ -1,5 +1,5 @@
 
-use crate::domain::{ResourceId, resource::Resource};
+use fscl_core::{ResourceId, Resource};
 
 use super::error::RepositoryError;
 

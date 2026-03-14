@@ -1,8 +1,10 @@
 use crate::{
     adapters::driving::db::ComponentRepository,
-    domain::{component::Component, resource::ResourceId},
+    domain::component::Component,
     ports::{ComponentApplicationError, ComponentPort, NewComponentRequest},
 };
+
+use fscl_core::ResourceId;
 
 #[derive(Debug, Clone)]
 pub struct ComponentService<R>

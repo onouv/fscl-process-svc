@@ -7,7 +7,8 @@ use dotenv::dotenv;
 use std::env;
 use migration::Migrator;
 
-use crate::{adapters::driving::db::models, domain::{ResourceId, component::Component}};
+use fscl_core::ResourceId;
+use crate::{adapters::driving::db::models, domain::component::Component};
 use super::{
     error::RepositoryError,
     ComponentRepository,

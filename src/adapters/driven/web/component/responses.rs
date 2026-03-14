@@ -1,6 +1,7 @@
 use axum::{Json, http::StatusCode, response::IntoResponse};
 
-use crate::{adapters::driven::web::responses::ApiSuccess, domain::{Component, Resource}};
+use fscl_core::Resource;
+use crate::{adapters::driven::web::responses::ApiSuccess, domain::Component};
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 pub(crate) struct CreateComponentResponse {

@@ -4,7 +4,7 @@ A web service for managing Components of the FSCL Process View.
 
 ## Architecture
 
-Implementig a hexagonal architecture.
+Implementig a hexagonal architecture. Refer to the [doc repo](https://github.com/onouv/fscl) for further information.
 
 ### Adapters: 
 
@@ -14,7 +14,7 @@ Wrapping Axum in an `HttpServer` type.
 
 #### Outbound Database
 
-PostgreSQL 12+
+PostgreSQL (tested with 17)
 
 `ComponentRepository`
 

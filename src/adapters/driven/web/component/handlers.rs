@@ -35,7 +35,7 @@ where
             Err(app_error) => {
                 let api_error = match app_error {
                     ComponentApplicationError::ResourceIdDuplicate { id } => {
-                        ApiError::Conflict(format!("{} gibts schon", id))
+                        ApiError::Conflict(format!("{} gibts schon", id.to_string()))
                     },
                     _ => {
                         ApiError::InternalServerError("weiss nich".to_string())

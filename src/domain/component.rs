@@ -1,4 +1,6 @@
-use fscl_core::{Resource, ResourceId};
+use fscl_core::ResourceId;
+
+use crate::domain::Resource;
 
 #[derive(Debug)]
 pub struct Component {

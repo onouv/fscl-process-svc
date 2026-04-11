@@ -5,12 +5,18 @@ use axum::{
     response::IntoResponse,
 };
 use serde::Serialize;
-
+use thiserror::Error;
 use crate::ports::{ComponentApplicationError, RequestBuildError};
 
+#[derive(Error, Debug)]
 pub enum ApiError {
+    #[error("internal server error: {0}")]
     InternalServerError(String),
+
+    #[error("cannot process resource: {0}")]
     CannotProcessResource(String),
+
+    #[error("request in conflict with a resource: {0}")]
     Conflict(String),
 }
 
@@ -109,13 +115,13 @@ impl From<ComponentApplicationError> for ApiError {
     fn from(value: ComponentApplicationError) -> Self {
         match value {
             ComponentApplicationError::ResourceIdDuplicate { id } => {
-                ApiError::Conflict(format!("duplicate resource with id {}", id))
+                ApiError::Conflict(format!("duplicate resource with id {}", id.to_string()))
             }
             ComponentApplicationError::NoSuchResourceId { id } => {
-                ApiError::CannotProcessResource(format!("no such resource with id {}", id))
+                ApiError::CannotProcessResource(format!("no such resource with id {}", id.to_string()))
             }
             ComponentApplicationError::NoSuchParentId { id } => {
-                ApiError::CannotProcessResource(format!("no such resource with id {}", id))
+                ApiError::CannotProcessResource(format!("no such resource with id {}", id.to_string()))
             }
             ComponentApplicationError::Unknown => {
                 ApiError::InternalServerError("Unknown error".to_string())

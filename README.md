@@ -1,88 +1,111 @@
-# FSCL Process Service — Hexagonal Skeleton 
+# fscl-process-svc
 
-A web service for managing Components of the FSCL Process View.
+Bounded-context service crate for the process view.
 
-## Architecture
+Kubernetes naming uses `process-api` for the workload to avoid colliding with the Kubernetes `Service` suffix, but the git repo and crate name stay `fscl-process-svc`.
 
-Implementig a hexagonal architecture. Refer to the [doc repo](https://github.com/onouv/fscl) for further information.
+The crate currently compiles in an earlier design state. It is not yet migrated to use `ComponentLifecycleUow` end to end, and its future NATS-consumer role is scaffolded at the deployment layer rather than fully implemented in-process.
 
-### Adapters: 
+## Dependencies
 
-#### Inbound Web/ REST API
+```text
+fscl-process-svc
+    |
+    +--> fscl_core
+    |
+    +--> migration
 
-Wrapping Axum in an `HttpServer` type. 
-
-#### Outbound Database
-
-PostgreSQL (tested with 17)
-
-`ComponentRepository`
-
-### Ports
-
-`ComponentPort`
-
-### Domain
-
-#### Application Services
-`ComponentService` 
-- implementing `ComponentPort`
-- using `ComponentRepository`
-
-
-## Setup
-
-### Environment
-
-The system checks for a `.env` file in the project root folder to find certain configuration variables. These values are needed for the dataase layer including the docker setup of the database. After cloning the project, you need to set one up:
-
-```bash
-#.env 
-# variables are mandatory, values given are a dev default
-DB_TYPE=postgres
-DB_HOST=localhost
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=postgres
-```
-### Database Setup
-
-```bash
-# from project root folder
-docker compose --env-file .env -f ./docker/compose.yaml up
-```
-Assuming a postgres server is now running on localhost, observe that an empty db has been started: 
-
-```bash
-psql -h localhost -p 5432 -U postgres
-postgres=# \d
-Did not find any relations.
-postgres=# 
+dev / k8s runtime
+    |
+    +--> sidecar fscl-outbox-publisher
 ```
 
-Note: the system will initialize the database by executing a sea-orm migration on startup.
+And the deployment-level relationship is:
 
-## Run
-```bash
-# Build and run
-cargo build --release
-cargo run --release
-```
-or apply log flags
-
-```bash 
-RUST_LOG=trace cargo run
-``` 
-## Example Usage
-
-### Create a Component
-```bash
-curl -X POST http://localhost:3100/api/v2/components \
-  -H "Content-Type: application/json" \
-  -d '{"id": "100", "name": "Door Lock" }'
+```text
+process-api container  --> PostgreSQL
+process-api container  --> NATS consumer role (scaffolded)
+outbox-publisher sidecar --> PostgreSQL outbox
+outbox-publisher sidecar --> NATS publisher role
 ```
 
+## Split
 
-## License
+```text
+fscl-process-svc        -> HTTP API, process view persistence, current app logic
+fscl_core               -> shared domain/application contracts
+fscl-messaging          -> shared outbox/wire contract, used indirectly today
+fscl-outbox-publisher   -> sidecar publisher runtime
+```
 
-MIT
+## Config
+
+Shared/local dev loading order:
+
+1. `../.env.shared`
+2. local `.env`
+3. container or shell overrides
+
+Current local config points:
+
+- `DB_TYPE`: database scheme, currently `postgres`
+- `DB_HOST`: database host
+- `DB_PORT`: database port
+- `DB_USER`: database user
+- `DB_PASSWORD`: database password
+- `DB_NAME`: process bounded-context database name
+- `APP_HOST`: bind address for the HTTP server
+- `APP_PORT`: bind port for the HTTP server
+- `NATS_URL`: reserved for the process-api consumer role and shared local setup
+- `NATS_JETSTREAM_STREAM`: target JetStream stream name for the bounded context
+- `NATS_JETSTREAM_DURABLE_CONSUMER`: durable consumer name for `process-api`
+- `NATS_JETSTREAM_ACK_POLICY`: intended acknowledgement policy
+- `NATS_JETSTREAM_ACK_WAIT`: intended acknowledgement timeout
+
+Today the DB settings are used by the running crate. The NATS consumer settings are scaffolding for the target architecture.
+
+## Dev Setup
+
+Create the env files:
+
+```sh
+cp ../.env.shared.example ../.env.shared
+cp .env.example .env
+```
+
+Run tests/build locally:
+
+```sh
+cd fscl-process-svc
+cargo test
+cargo run
+```
+
+Run the local dev stack:
+
+```sh
+docker compose -f ../compose/infra.yaml -f ../compose/process-stack.yaml up
+```
+
+The service currently applies its own SeaORM migration on startup.
+
+## K8s Setup
+
+Scaffold only for now.
+
+Relevant manifests live under [fscl/doc/rust/fscl-k8s](../fscl/doc/rust/fscl-k8s):
+
+- `15-process-messaging.yaml`: shared messaging runtime values for the bounded context
+- `20-process-api.yaml`: `process-api` deployment and sidecar wiring
+- `22-outbox-publisher.yaml`: publisher-local settings
+- `30-postgres.yaml`: bounded-context database
+
+Target workload split:
+
+```text
+process-api pod
+  |- process-api container       -> serves HTTP, will consume NATS events
+  |- outbox-publisher sidecar    -> relays DB outbox rows to NATS
+```
+
+The database-owning service remains responsible for applying both its own schema and the shared outbox schema.

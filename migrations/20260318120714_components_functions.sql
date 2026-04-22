@@ -1,38 +1,29 @@
-CREATE TYPE AGGREGATE_TYPE AS ENUM ('function', 'system', 'component', 'location');
-
 CREATE TABLE IF NOT EXISTS functions (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  description TEXT NOT NULL,
+  description TEXT,
   parent_id TEXT REFERENCES functions(id) ON DELETE CASCADE,
   version INT NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS components (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  description TEXT NOT NULL,
+  description TEXT,
   parent_id TEXT REFERENCES components(id) ON DELETE CASCADE,
   version INT NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS component_implements_function (
   id TEXT PRIMARY KEY,
   component_id TEXT NOT NULL REFERENCES components(id) ON DELETE CASCADE,
   function_id TEXT NOT NULL REFERENCES functions(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(component_id, function_id)
-);
-
-CREATE TABLE IF NOT EXISTS outbox (
-  id TEXT PRIMARY KEY,
-  event_type TEXT NOT NULL,
-  payload JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL
 );
 
 CREATE INDEX idx_functions_parent_created ON functions(parent_id, created_at);

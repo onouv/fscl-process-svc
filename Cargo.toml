@@ -3,16 +3,11 @@ name = "fscl-process-svc"
 version = "0.1.0"
 edition = "2024"
 
-
-[workspace]
-members = ["migration"]
-
 [dependencies]
 fscl_core = { path = "../fscl-core" }
-migration = { path = "migration" }
+fscl-messaging = { path = "../fscl-messaging" }
 fmt = "0.1.0"
-sea-orm = { version = "1.1.19", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }
-sea-orm-migration = "1.1.19"
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono", "json", "migrate"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

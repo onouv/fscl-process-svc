@@ -9,7 +9,6 @@ use axum::{
     self, Json, Router,
     routing::{get, post},
 };
-use sea_orm::sea_query::func;
 use tokio::net::TcpListener;
 
 pub(crate) struct HttpServerConfig {

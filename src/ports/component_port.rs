@@ -1,13 +1,11 @@
 use std::fmt::Display;
 use fscl_core::{ResourceId, ResourceIdError};
-use crate::domain:: component::Component;
 use thiserror::Error;
 
 pub(crate) enum ComponentApplicationError {
-    ResourceIdDuplicate { id: ResourceId },
-    NoSuchResourceId { id: ResourceId },
-    NoSuchParentId { id: ResourceId },
-    Unknown,
+    InvalidResourceId(String),
+    CannotProcess(String),
+    Infrastructure(String),
 }
 
 
@@ -75,5 +73,5 @@ pub trait ComponentPort: Clone + Send + Sync + 'static {
     fn new_component(
         &self,
         req: NewComponentRequest,
-    ) -> impl std::future::Future<Output = Result<Component, ComponentApplicationError>> + Send;
+    ) -> impl std::future::Future<Output = Result<(), ComponentApplicationError>> + Send;
 }

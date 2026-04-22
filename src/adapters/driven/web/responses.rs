@@ -114,18 +114,9 @@ impl From<RequestBuildError> for ApiError {
 impl From<ComponentApplicationError> for ApiError {
     fn from(value: ComponentApplicationError) -> Self {
         match value {
-            ComponentApplicationError::ResourceIdDuplicate { id } => {
-                ApiError::Conflict(format!("duplicate resource with id {}", id.to_string()))
-            }
-            ComponentApplicationError::NoSuchResourceId { id } => {
-                ApiError::CannotProcessResource(format!("no such resource with id {}", id.to_string()))
-            }
-            ComponentApplicationError::NoSuchParentId { id } => {
-                ApiError::CannotProcessResource(format!("no such resource with id {}", id.to_string()))
-            }
-            ComponentApplicationError::Unknown => {
-                ApiError::InternalServerError("Unknown error".to_string())
-            }
+            ComponentApplicationError::InvalidResourceId(e) => ApiError::CannotProcessResource(e),
+            ComponentApplicationError::CannotProcess(e) => ApiError::CannotProcessResource(e),
+            ComponentApplicationError::Infrastructure(e) => ApiError::InternalServerError(e),
         }
     }
 }

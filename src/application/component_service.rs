@@ -1,78 +1,71 @@
 use crate::{
-    adapters::driving::db::ComponentRepository,
-    domain::component::Component,
     ports::{ComponentApplicationError, ComponentPort, NewComponentRequest},
 };
 
-use fscl_core::ResourceId;
+use fscl_core::{
+    ComponentLifecycleUow,
+    CreateComponentError,
+    CreateComponentRequest,
+    ports::{ComponentRepositoryPort, DomainEventPublisherPort, UnitOfWorkPort},
+};
 
-#[derive(Debug, Clone)]
-pub struct ComponentService<R>
+#[derive(Clone)]
+pub struct ComponentService<U, R, P>
 where
-    R: ComponentRepository,
+    U: UnitOfWorkPort,
+    R: ComponentRepositoryPort<Error = U::Error>,
+    P: DomainEventPublisherPort<Error = U::Error>,
 {
-    repo: R,
+    lifecycle: ComponentLifecycleUow<U, R, P>,
 }
 
-impl<R> ComponentService<R>
+impl<U, R, P> ComponentService<U, R, P>
 where
-    R: ComponentRepository,
+    U: UnitOfWorkPort,
+    R: ComponentRepositoryPort<Error = U::Error> + 'static,
+    P: DomainEventPublisherPort<Error = U::Error> + 'static,
 {
-    pub fn new(repo: R) -> Self {
-        Self { repo }
-    }
-
-    async fn new_top_level_component(
-        &self,
-        req: NewComponentRequest,
-    ) -> Result<Component, ComponentApplicationError> {
-        let component = Component::new(
-            req.id,
-            req.name.as_str(),
-            req.description.as_deref().unwrap_or(""),
-        );
-
-        Ok(component)
-    }
-
-    async fn new_sub_component(
-        &self,
-        parent: ResourceId,
-        req: NewComponentRequest,
-    ) -> Result<Component, ComponentApplicationError> {
-        todo!()
+    pub fn new(lifecycle: ComponentLifecycleUow<U, R, P>) -> Self {
+        Self { lifecycle }
     }
 }
 
-impl<R> ComponentPort for ComponentService<R>
+impl<U, R, P> ComponentPort for ComponentService<U, R, P>
 where
-    R: ComponentRepository + Send + Sync + 'static,
+    U: UnitOfWorkPort + 'static,
+    U::Error: std::fmt::Display,
+    R: ComponentRepositoryPort<Error = U::Error> + Send + Sync + 'static,
+    P: DomainEventPublisherPort<Error = U::Error> + Send + Sync + 'static,
+    R: for<'tx> ComponentRepositoryPort<Error = U::Error, Tx<'tx> = U::Tx<'tx>>,
+    P: for<'tx> DomainEventPublisherPort<Error = U::Error, Tx<'tx> = U::Tx<'tx>>,
 {
     fn new_component(
         &self,
         req: NewComponentRequest,
-    ) -> impl Future<Output = Result<Component, ComponentApplicationError>> + Send {
+    ) -> impl Future<Output = Result<(), ComponentApplicationError>> + Send {
+        let lifecycle = self.lifecycle.clone();
         async move {
-            let component = match self.repo.load(&req.id).await {
-                Ok(comp) => comp,
-                Err(e) => {
-                    log::error!("Error loading component with id {}: {:?}", req.id.to_string(), e);
-                    
-                    return Err(ComponentApplicationError::Unknown);
-                }
-            };
-
-            if component.is_some() {
-                log::info!("encountered duplicate resource with id {}", req.id.to_string());
-
-                return Err(ComponentApplicationError::ResourceIdDuplicate{ id: req.id});
-            }
-
-            // TODO: if parent_id is Some, then we are meant to be a sub-component
-
-            log::trace!("creating new component: (id: {}, name: {})", req.id.to_string(), req.name);
-
-            Ok(Component::new(req.id, req.name.as_str(), req.description.as_deref().unwrap_or("")))
+            lifecycle
+                .create_component(CreateComponentRequest {
+                    id: req.id.to_string(),
+                    name: req.name,
+                    description: req.description,
+                    parent: req.parent_id.map(|p| p.to_string()),
+                    children: vec![],
+                    parameters: Default::default(),
+                })
+                .await
+                .map_err(|e| match e {
+                    CreateComponentError::InvalidId(err) => {
+                        ComponentApplicationError::InvalidResourceId(err.to_string())
+                    }
+                    CreateComponentError::Domain(err) => {
+                        ComponentApplicationError::CannotProcess(err.to_string())
+                    }
+                    CreateComponentError::Infrastructure(err) => {
+                        ComponentApplicationError::Infrastructure(err.to_string())
+                    }
+                })
         }
     }
 }

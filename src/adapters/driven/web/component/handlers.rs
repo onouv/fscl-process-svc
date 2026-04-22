@@ -3,8 +3,7 @@ use crate::{
         app_state::AppState,
         responses::{ApiError, ApiSuccess},
     },
-    domain::Component,
-    ports::{ComponentApplicationError, ComponentPort, NewComponentRequest},
+    ports::{ComponentPort, NewComponentRequest},
 };
 use axum::{extract::State, http::StatusCode, response::Json};
 
@@ -26,24 +25,17 @@ where
             request.parent_id,
         )?;
 
-        let component = state.component_service.new_component(application_req).await;
+        let created_id = application_req.id.to_string();
 
-        match component {
-            Ok(c) => { 
-                Ok(ApiSuccess::new(StatusCode::CREATED, CreateComponentResponse::from(&c)))
-            },
-            Err(app_error) => {
-                let api_error = match app_error {
-                    ComponentApplicationError::ResourceIdDuplicate { id } => {
-                        ApiError::Conflict(format!("{} gibts schon", id.to_string()))
-                    },
-                    _ => {
-                        ApiError::InternalServerError("weiss nich".to_string())
-                    }
-                };
+        state
+            .component_service
+            .new_component(application_req)
+            .await
+            .map_err(ApiError::from)?;
 
-                Err(api_error)
-            }
-        }
+        Ok(ApiSuccess::new(
+            StatusCode::CREATED,
+            CreateComponentResponse::from_id(created_id),
+        ))
     
 }

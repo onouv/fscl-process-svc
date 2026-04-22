@@ -1,106 +1,111 @@
-# FSCL Process Service — Hexagonal Skeleton 
+# fscl-process-svc
 
-A web service for managing Components of the FSCL Process View.
+Bounded-context service crate for the process view.
 
-## Architecture
+Kubernetes naming uses `process-api` for the workload to avoid colliding with the Kubernetes `Service` suffix, but the git repo and crate name stay `fscl-process-svc`.
 
-Implementig a hexagonal architecture.
+The crate currently compiles in an earlier design state. It is not yet migrated to use `ComponentLifecycleUow` end to end, and its future NATS-consumer role is scaffolded at the deployment layer rather than fully implemented in-process.
 
-### Adapters: 
+## Dependencies
 
-#### Inbound Web/ REST API
+```text
+fscl-process-svc
+    |
+    +--> fscl_core
+    |
+    +--> migration
 
-Wrapping Axum in an `HttpServer` type. 
-
-#### Outbound Database
-
-PostgreSQL 12+
-
-`ComponentRepository`
-
-### Ports
-
-`ComponentPort`
-
-### Domain
-
-#### Application Services
-`ComponentService` 
-- implementing `ComponentPort`
-- using `ComponentRepository`
-
-
-## Setup
-### Database Setup
-
-Assuming a postgres server is running on localhost: 
-
-```bash
->> psql -H localhost -P 5432 -U postgres
-postgres=# create database process_svc
-...
-postgres=# \c process_svc
+dev / k8s runtime
+    |
+    +--> sidecar fscl-outbox-publisher
 ```
 
-Paste the following into the psql commandline:
-```sql
--- Create tables (manual or via migrations)
-CREATE TABLE functions (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT NOT NULL,
-  parent_id TEXT REFERENCES functions(id) ON DELETE CASCADE,
-  version INT NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
+And the deployment-level relationship is:
 
-CREATE TABLE components (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT NOT NULL,
-  parent_id TEXT REFERENCES components(id) ON DELETE CASCADE,
-  version INT NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL
-);
-
-CREATE TABLE component_implements_function (
-  id TEXT PRIMARY KEY,
-  component_id TEXT NOT NULL REFERENCES components(id) ON DELETE CASCADE,
-  function_id TEXT NOT NULL REFERENCES functions(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL,
-  UNIQUE(component_id, function_id)
-);
-
-CREATE INDEX idx_functions_parent_created ON functions(parent_id, created_at);
-CREATE INDEX idx_components_parent_created ON components(parent_id, created_at);
-CREATE INDEX idx_impl_component ON component_implements_function(component_id);
+```text
+process-api container  --> PostgreSQL
+process-api container  --> NATS consumer role (scaffolded)
+outbox-publisher sidecar --> PostgreSQL outbox
+outbox-publisher sidecar --> NATS publisher role
 ```
 
-## Run
-```bash
-# Set database URL
-Modify entries in `.env`
+## Split
 
-
-# Build and run
-cargo build --release
-cargo run --release
-
-# Server listens on http://0.0.0.0:8080
+```text
+fscl-process-svc        -> HTTP API, process view persistence, current app logic
+fscl_core               -> shared domain/application contracts
+fscl-messaging          -> shared outbox/wire contract, used indirectly today
+fscl-outbox-publisher   -> sidecar publisher runtime
 ```
 
-## Example Usage
+## Config
 
-### Create a Component
-```bash
-curl -X POST http://localhost:8080/api/v1/process/components \
-  -H "Content-Type: application/json" \
-  -d '{"id": "C100", "name": "Door Lock" }'
+Shared/local dev loading order:
+
+1. `../.env.shared`
+2. local `.env`
+3. container or shell overrides
+
+Current local config points:
+
+- `DB_TYPE`: database scheme, currently `postgres`
+- `DB_HOST`: database host
+- `DB_PORT`: database port
+- `DB_USER`: database user
+- `DB_PASSWORD`: database password
+- `DB_NAME`: process bounded-context database name
+- `APP_HOST`: bind address for the HTTP server
+- `APP_PORT`: bind port for the HTTP server
+- `NATS_URL`: reserved for the process-api consumer role and shared local setup
+- `NATS_JETSTREAM_STREAM`: target JetStream stream name for the bounded context
+- `NATS_JETSTREAM_DURABLE_CONSUMER`: durable consumer name for `process-api`
+- `NATS_JETSTREAM_ACK_POLICY`: intended acknowledgement policy
+- `NATS_JETSTREAM_ACK_WAIT`: intended acknowledgement timeout
+
+Today the DB settings are used by the running crate. The NATS consumer settings are scaffolding for the target architecture.
+
+## Dev Setup
+
+Create the env files:
+
+```sh
+cp ../.env.shared.example ../.env.shared
+cp .env.example .env
 ```
 
+Run tests/build locally:
 
-## License
+```sh
+cd fscl-process-svc
+cargo test
+cargo run
+```
 
-MIT
+Run the local dev stack:
+
+```sh
+docker compose -f ../compose/infra.yaml -f ../compose/process-stack.yaml up
+```
+
+The service currently applies its own SeaORM migration on startup.
+
+## K8s Setup
+
+Scaffold only for now.
+
+Relevant manifests live under [fscl/doc/rust/fscl-k8s](../fscl/doc/rust/fscl-k8s):
+
+- `15-process-messaging.yaml`: shared messaging runtime values for the bounded context
+- `20-process-api.yaml`: `process-api` deployment and sidecar wiring
+- `22-outbox-publisher.yaml`: publisher-local settings
+- `30-postgres.yaml`: bounded-context database
+
+Target workload split:
+
+```text
+process-api pod
+  |- process-api container       -> serves HTTP, will consume NATS events
+  |- outbox-publisher sidecar    -> relays DB outbox rows to NATS
+```
+
+The database-owning service remains responsible for applying both its own schema and the shared outbox schema.

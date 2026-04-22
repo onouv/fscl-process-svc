@@ -1,28 +1,77 @@
-use crate::{domain::item::ItemId};
+use std::fmt::Display;
+use fscl_core::{ResourceId, ResourceIdError};
+use thiserror::Error;
 
-pub enum ComponentError {
-    ItemIdPreExisting,
-    NoSuchItemId,
-    UnknownError,
+pub(crate) enum ComponentApplicationError {
+    InvalidResourceId(String),
+    CannotProcess(String),
+    Infrastructure(String),
 }
+
+
+#[derive(Debug, Clone, Error)]
+pub(crate) enum RequestBuildError {
+    InvalidId(ResourceIdError),
+    InvalidParentId(ResourceIdError),
+}
+
+impl Display for RequestBuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidId(error) => {
+                write!(f, "Invalid id {}", error)
+            }
+            Self::InvalidParentId(error) => {
+                write!(f, "Invalid parent id {}", error)
+            }
+        }
+    }
+}
+
+
 
 #[derive(Clone)]
-pub struct CreateComponentRequest {
-    pub id: ItemId,
+pub struct NewComponentRequest {
+    pub id: ResourceId,
     pub name: String,
     pub description: Option<String>,
-    pub implementers: Option<Vec<ItemId>>,
+    pub parent_id: Option<ResourceId>,
 }
 
-pub trait ComponentPort: Clone + Send + Sync + 'static
-{
+impl NewComponentRequest {
+    pub(crate) fn new(
+        id: String,
+        name: String,
+        description: Option<String>,
+        parent_id: Option<String>,
+    ) -> Result<Self, RequestBuildError> {
+        let id = match ResourceId::new(id) {
+            Ok(id) => id,
+            Err(e) => {
+                return Err(RequestBuildError::InvalidId(e));
+            }
+        };
+
+        let parent_id = match parent_id {
+            Some(p) => match ResourceId::new(p) {
+                Ok(id) => Some(id),
+                Err(e) => return Err(RequestBuildError::InvalidParentId(e)),
+            },
+            None => None,
+        };
+
+        Ok(Self {
+            id,
+            name,
+            description,
+            parent_id,
+        })
+    }
+}
+
+pub trait ComponentPort: Clone + Send + Sync + 'static {
     fn new_component(
         &self,
-        req: CreateComponentRequest,
-    ) -> impl Future<Output = Result<(), ComponentError>> + Send;
-    fn new_sub_component(
-        &self,
-        parent: ItemId,
-        req: CreateComponentRequest,
-    ) -> impl Future<Output = Result<(), ComponentError>> + Send;
+        req: NewComponentRequest,
+    ) -> impl std::future::Future<Output = Result<(), ComponentApplicationError>> + Send;
 }

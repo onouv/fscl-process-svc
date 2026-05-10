@@ -7,16 +7,11 @@ use std::env;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use adapters::{driven::web::http_server::HttpServer, driving::db::*};
-use dotenv::{dotenv, from_filename};
 use fscl_core::{
     ComponentLifecycleUow,
     adapters::driving::{
         db::{SqlxPgDatabase, UnitOfWork},
-        messaging::{
-            ComponentDomainEventMapper,
-            DomainEventOutboxPublisher,
-            SqlxOutboxWriter,
-        },
+        messaging::{ComponentDomainEventMapper, DomainEventOutboxPublisher, SqlxOutboxWriter},
     },
 };
 use fscl_messaging::ensure_outbox_schema;
@@ -44,8 +39,6 @@ fn get_database_url() -> String {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    from_filename("../.env.shared").ok();
-    dotenv().ok();
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let database_url = get_database_url();

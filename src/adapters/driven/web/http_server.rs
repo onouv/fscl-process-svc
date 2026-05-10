@@ -21,11 +21,8 @@ pub struct HttpServer {
 }
 
 impl HttpServer {
-    pub async fn new<C>(
-        cfg: HttpServerConfig,
-        component_service: C 
-    ) -> anyhow::Result<Self> 
-    where 
+    pub async fn new<C>(cfg: HttpServerConfig, component_service: C) -> anyhow::Result<Self>
+    where
         C: ComponentPort + Send + Sync + 'static,
     {
         let state = AppState {
@@ -52,9 +49,9 @@ impl HttpServer {
             .nest("/function", function_routes)
             .nest("/test", test_routes);
 
-
-        let router = Router::<AppState<C>>::new().nest("/api/v2", api_routes).with_state(state);
-
+        let router = Router::<AppState<C>>::new()
+            .nest("/api/v2/process", api_routes)
+            .with_state(state);
 
         /*let app = Router::new()
             .route("/", get(root))

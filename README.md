@@ -40,11 +40,7 @@ fscl-outbox-publisher   -> sidecar publisher runtime
 
 ## Config
 
-Shared/local dev loading order:
-
-1. `../.env.shared`
-2. local `.env`
-3. container or shell overrides
+Runtime values are read from process environment variables (shell or container).
 
 Current local config points:
 
@@ -66,11 +62,16 @@ Today the DB settings are used by the running crate. The NATS consumer settings 
 
 ## Dev Setup
 
-Create the env files:
+Load local dev secrets from the compose helper:
 
 ```sh
-cp ../.env.shared.example ../.env.shared
-cp .env.example .env
+source ../compose/load-secrets.sh
+```
+
+For host-side API debugging, load process-api runtime variables:
+
+```sh
+source ../compose/load-process-api-env.sh
 ```
 
 Run tests/build locally:
@@ -84,7 +85,8 @@ cargo run
 Run the local dev stack:
 
 ```sh
-docker compose -f ../compose/infra.yaml -f ../compose/process-stack.yaml up
+source ../compose/load-secrets.sh
+docker compose -p fscl -f ../compose/process-stack.yaml up
 ```
 
 The service currently applies its own SeaORM migration on startup.

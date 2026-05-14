@@ -7,16 +7,11 @@ use std::env;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use adapters::{
-    driven::{
-        msg::project_created_consumer::ProjectCreatedConsumer,
-        web::http_server::HttpServer,
-    },
+    driven::{msg::project_created_consumer::ProjectCreatedConsumer, web::http_server::HttpServer},
     driving::db::*,
 };
 use fscl_core::{
-    ComponentLifecycleUow,
-    ProjectCreatedEventHandlerUow,
-    ProjectLifecycleUow,
+    ComponentLifecycleUow, ProjectCreatedEventHandlerUow, ProjectLifecycleUow,
     adapters::driving::{
         db::{SqlxPgDatabase, UnitOfWork},
         messaging::{ComponentDomainEventMapper, DomainEventOutboxPublisher, SqlxOutboxWriter},
@@ -28,8 +23,7 @@ use sqlx::PgPool;
 use crate::{
     adapters::driven::web::http_server::HttpServerConfig,
     adapters::driving::db::{
-        sqlx_project_repository::SqlxProjectRepository,
-        sqlx_repository::SqlxRepository,
+        sqlx_project_repository::SqlxProjectRepository, sqlx_repository::SqlxRepository,
     },
     application::{
         component_service::ComponentService,

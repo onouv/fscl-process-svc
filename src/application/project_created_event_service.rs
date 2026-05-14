@@ -8,8 +8,14 @@ use fscl_messaging::ProjectCreatedEvent;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProjectCreatedEventServiceError {
-    #[error("cannot process project-created event: {0}")]
-    CannotProcess(String),
+    #[error("invalid project id: {0}")]
+    InvalidProjectId(String),
+    #[error("invalid project name: {0}")]
+    InvalidName(String),
+    #[error("invalid id format: {0}")]
+    InvalidFormat(String),
+    #[error("infrastructure error while handling project-created event: {0}")]
+    Infrastructure(String),
 }
 
 #[derive(Clone)]
@@ -43,16 +49,16 @@ where
         async move {
             handler.handle(event).await.map_err(|error| match error {
                 HandleProjectCreatedEventError::InvalidProjectId(e) => {
-                    ProjectCreatedEventServiceError::CannotProcess(e.to_string())
+                    ProjectCreatedEventServiceError::InvalidProjectId(e.to_string())
                 }
                 HandleProjectCreatedEventError::InvalidName(e) => {
-                    ProjectCreatedEventServiceError::CannotProcess(e.to_string())
+                    ProjectCreatedEventServiceError::InvalidName(e.to_string())
                 }
                 HandleProjectCreatedEventError::InvalidFormat(e) => {
-                    ProjectCreatedEventServiceError::CannotProcess(e.to_string())
+                    ProjectCreatedEventServiceError::InvalidFormat(e.to_string())
                 }
                 HandleProjectCreatedEventError::Infrastructure(e) => {
-                    ProjectCreatedEventServiceError::CannotProcess(e.to_string())
+                    ProjectCreatedEventServiceError::Infrastructure(e.to_string())
                 }
             })
         }

@@ -5,11 +5,16 @@ mod ports;
 
 use std::env;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::time::Duration;
 
 use adapters::{
-    driven::{msg::project_created_consumer::ProjectCreatedConsumer, web::http_server::HttpServer},
+    driven::{
+        msg::project_created_consumer::{ProjectCreatedConsumer, ProjectCreatedConsumerConfig},
+        web::http_server::HttpServer,
+    },
     driving::db::*,
 };
+use async_nats::jetstream::consumer::AckPolicy;
 use fscl_core::{
     ComponentLifecycleUow, ProjectCreatedEventHandlerUow, ProjectLifecycleUow,
     adapters::driving::{
@@ -55,6 +60,54 @@ fn get_project_created_subject() -> String {
         .unwrap_or_else(|_| "events.project.created".to_string())
 }
 
+fn get_nats_jetstream_stream() -> String {
+    env::var("NATS_JETSTREAM_STREAM").unwrap_or_else(|_| "fscl-events".to_string())
+}
+
+fn get_nats_jetstream_durable_consumer() -> String {
+    env::var("NATS_JETSTREAM_DURABLE_CONSUMER").unwrap_or_else(|_| "process-api".to_string())
+}
+
+fn get_nats_jetstream_ack_policy() -> AckPolicy {
+    match env::var("NATS_JETSTREAM_ACK_POLICY")
+        .unwrap_or_else(|_| "explicit".to_string())
+        .to_lowercase()
+        .as_str()
+    {
+        "all" => AckPolicy::All,
+        "none" => AckPolicy::None,
+        _ => AckPolicy::Explicit,
+    }
+}
+
+fn parse_duration(value: &str) -> Option<Duration> {
+    if let Some(number) = value.strip_suffix("ms") {
+        return number.parse::<u64>().ok().map(Duration::from_millis);
+    }
+    if let Some(number) = value.strip_suffix('s') {
+        return number.parse::<u64>().ok().map(Duration::from_secs);
+    }
+    if let Some(number) = value.strip_suffix('m') {
+        return number
+            .parse::<u64>()
+            .ok()
+            .map(|minutes| Duration::from_secs(minutes * 60));
+    }
+    if let Some(number) = value.strip_suffix('h') {
+        return number
+            .parse::<u64>()
+            .ok()
+            .map(|hours| Duration::from_secs(hours * 3600));
+    }
+
+    value.parse::<u64>().ok().map(Duration::from_secs)
+}
+
+fn get_nats_jetstream_ack_wait() -> Duration {
+    let raw = env::var("NATS_JETSTREAM_ACK_WAIT").unwrap_or_else(|_| "30s".to_string());
+    parse_duration(&raw).unwrap_or_else(|| Duration::from_secs(30))
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
@@ -82,11 +135,15 @@ async fn main() -> anyhow::Result<()> {
     let project_created_event_service = ProjectCreatedEventService::new(project_created_handler);
 
     let nats_client = async_nats::connect(get_nats_url()).await?;
-    let project_created_consumer = ProjectCreatedConsumer::new(
-        nats_client,
-        get_project_created_subject(),
-        project_created_event_service,
-    );
+    let consumer_config = ProjectCreatedConsumerConfig {
+        stream_name: get_nats_jetstream_stream(),
+        durable_name: get_nats_jetstream_durable_consumer(),
+        subject: get_project_created_subject(),
+        ack_policy: get_nats_jetstream_ack_policy(),
+        ack_wait: get_nats_jetstream_ack_wait(),
+    };
+    let project_created_consumer =
+        ProjectCreatedConsumer::new(nats_client, consumer_config, project_created_event_service);
 
     let app_host = env::var("APP_HOST")
         .ok()

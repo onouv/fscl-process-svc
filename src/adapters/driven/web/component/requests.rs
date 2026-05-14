@@ -1,9 +1,9 @@
-use serde::{Serialize, Deserialize};
 use crate::ports::{NewComponentRequest, RequestBuildError};
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CreateComponentHttpRequestBody {
+    pub project_id: String,
     pub id: String,
     pub name: String,
 
@@ -16,7 +16,13 @@ pub struct CreateComponentHttpRequestBody {
 
 impl CreateComponentHttpRequestBody {
     pub(crate) fn try_into_domain(self) -> Result<NewComponentRequest, RequestBuildError> {
-      NewComponentRequest::new(self.id, self.name, self.description, self.parent_id) 
+        NewComponentRequest::new(
+            self.project_id,
+            self.id,
+            self.name,
+            self.description,
+            self.parent_id,
+        )
     }
 }
 

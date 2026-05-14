@@ -17,13 +17,7 @@ pub async fn create_component<C>(
 where
     C: ComponentPort + Send + Sync + 'static,
 {
-    
-        let application_req = NewComponentRequest::new(
-            request.id,
-            request.name,
-            request.description,
-            request.parent_id,
-        )?;
+    let application_req = request.try_into_domain()?;
 
         let created_id = application_req.id.to_string();
 
@@ -37,5 +31,4 @@ where
             StatusCode::CREATED,
             CreateComponentResponse::from_id(created_id),
         ))
-    
 }

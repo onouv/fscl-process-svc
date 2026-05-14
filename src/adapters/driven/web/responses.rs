@@ -101,6 +101,9 @@ impl<T: Serialize + PartialEq> IntoResponse for ApiSuccess<T> {
 impl From<RequestBuildError> for ApiError {
     fn from(value: RequestBuildError) -> Self {
         match value {
+            RequestBuildError::InvalidProjectId(e) => {
+                ApiError::CannotProcessResource(format!("invalid project id: {}", e))
+            }
             RequestBuildError::InvalidId(e) => {
                 ApiError::CannotProcessResource(format!("invalid resource id: {}", e))
             }

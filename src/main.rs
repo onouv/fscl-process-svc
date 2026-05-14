@@ -5,10 +5,18 @@ mod ports;
 
 use std::env;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::time::Duration;
 
-use adapters::{driven::web::http_server::HttpServer, driving::db::*};
+use adapters::{
+    driven::{
+        msg::project_created_consumer::{ProjectCreatedConsumer, ProjectCreatedConsumerConfig},
+        web::http_server::HttpServer,
+    },
+    driving::db::*,
+};
+use async_nats::jetstream::consumer::AckPolicy;
 use fscl_core::{
-    ComponentLifecycleUow,
+    ComponentLifecycleUow, ProjectCreatedEventHandlerUow, ProjectLifecycleUow,
     adapters::driving::{
         db::{SqlxPgDatabase, UnitOfWork},
         messaging::{ComponentDomainEventMapper, DomainEventOutboxPublisher, SqlxOutboxWriter},
@@ -19,8 +27,13 @@ use sqlx::PgPool;
 
 use crate::{
     adapters::driven::web::http_server::HttpServerConfig,
-    adapters::driving::db::sqlx_repository::SqlxRepository,
-    application::component_service::ComponentService,
+    adapters::driving::db::{
+        sqlx_project_repository::SqlxProjectRepository, sqlx_repository::SqlxRepository,
+    },
+    application::{
+        component_service::ComponentService,
+        project_created_event_service::ProjectCreatedEventService,
+    },
 };
 
 fn get_database_url() -> String {
@@ -37,6 +50,64 @@ fn get_database_url() -> String {
     )
 }
 
+fn get_nats_url() -> String {
+    env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string())
+}
+
+fn get_project_created_subject() -> String {
+    env::var("NATS_PROJECT_CREATED_SUBJECT")
+        .or_else(|_| env::var("NATS_SUBJECT"))
+        .unwrap_or_else(|_| "events.project.created".to_string())
+}
+
+fn get_nats_jetstream_stream() -> String {
+    env::var("NATS_JETSTREAM_STREAM").unwrap_or_else(|_| "fscl-events".to_string())
+}
+
+fn get_nats_jetstream_durable_consumer() -> String {
+    env::var("NATS_JETSTREAM_DURABLE_CONSUMER").unwrap_or_else(|_| "process-api".to_string())
+}
+
+fn get_nats_jetstream_ack_policy() -> AckPolicy {
+    match env::var("NATS_JETSTREAM_ACK_POLICY")
+        .unwrap_or_else(|_| "explicit".to_string())
+        .to_lowercase()
+        .as_str()
+    {
+        "all" => AckPolicy::All,
+        "none" => AckPolicy::None,
+        _ => AckPolicy::Explicit,
+    }
+}
+
+fn parse_duration(value: &str) -> Option<Duration> {
+    if let Some(number) = value.strip_suffix("ms") {
+        return number.parse::<u64>().ok().map(Duration::from_millis);
+    }
+    if let Some(number) = value.strip_suffix('s') {
+        return number.parse::<u64>().ok().map(Duration::from_secs);
+    }
+    if let Some(number) = value.strip_suffix('m') {
+        return number
+            .parse::<u64>()
+            .ok()
+            .map(|minutes| Duration::from_secs(minutes * 60));
+    }
+    if let Some(number) = value.strip_suffix('h') {
+        return number
+            .parse::<u64>()
+            .ok()
+            .map(|hours| Duration::from_secs(hours * 3600));
+    }
+
+    value.parse::<u64>().ok().map(Duration::from_secs)
+}
+
+fn get_nats_jetstream_ack_wait() -> Duration {
+    let raw = env::var("NATS_JETSTREAM_ACK_WAIT").unwrap_or_else(|_| "30s".to_string());
+    parse_duration(&raw).unwrap_or_else(|| Duration::from_secs(30))
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
@@ -48,14 +119,31 @@ async fn main() -> anyhow::Result<()> {
     ensure_outbox_schema(&pool).await?;
 
     let repository = SqlxRepository::new(pool.clone());
-    let uow = UnitOfWork::new(SqlxPgDatabase::from_pool(pool));
+    let component_uow = UnitOfWork::new(SqlxPgDatabase::from_pool(pool.clone()));
+    let project_uow = UnitOfWork::new(SqlxPgDatabase::from_pool(pool));
     let publisher = DomainEventOutboxPublisher::new(
         "process-view",
         ComponentDomainEventMapper,
         SqlxOutboxWriter,
     );
-    let lifecycle = ComponentLifecycleUow::new(uow, repository, publisher);
+    let lifecycle = ComponentLifecycleUow::new(component_uow, repository, publisher);
     let component_service = ComponentService::new(lifecycle);
+
+    let project_repository = SqlxProjectRepository::new();
+    let project_lifecycle = ProjectLifecycleUow::new(project_uow, project_repository);
+    let project_created_handler = ProjectCreatedEventHandlerUow::new(project_lifecycle);
+    let project_created_event_service = ProjectCreatedEventService::new(project_created_handler);
+
+    let nats_client = async_nats::connect(get_nats_url()).await?;
+    let consumer_config = ProjectCreatedConsumerConfig {
+        stream_name: get_nats_jetstream_stream(),
+        durable_name: get_nats_jetstream_durable_consumer(),
+        subject: get_project_created_subject(),
+        ack_policy: get_nats_jetstream_ack_policy(),
+        ack_wait: get_nats_jetstream_ack_wait(),
+    };
+    let project_created_consumer =
+        ProjectCreatedConsumer::new(nats_client, consumer_config, project_created_event_service);
 
     let app_host = env::var("APP_HOST")
         .ok()
@@ -72,6 +160,25 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let server = HttpServer::new(cfg, component_service).await?;
+    let http_task = tokio::spawn(async move { server.run().await });
+    let consumer_task = tokio::spawn(async move { project_created_consumer.run().await });
 
-    server.run().await
+    tokio::select! {
+        result = http_task => {
+            match result {
+                Ok(inner) => inner,
+                Err(error) => Err(anyhow::anyhow!("http task failed: {}", error)),
+            }
+        }
+        result = consumer_task => {
+            match result {
+                Ok(inner) => inner,
+                Err(error) => Err(anyhow::anyhow!("consumer task failed: {}", error)),
+            }
+        }
+        _ = tokio::signal::ctrl_c() => {
+            log::info!("shutdown signal received");
+            Ok(())
+        }
+    }
 }

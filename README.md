@@ -4,7 +4,7 @@ Bounded-context service crate for the process view.
 
 Kubernetes naming uses `process-api` for the workload to avoid colliding with the Kubernetes `Service` suffix, but the git repo and crate name stay `fscl-process-svc`.
 
-The crate currently compiles in an earlier design state. It is not yet migrated to use `ComponentLifecycleUow` end to end, and its future NATS-consumer role is scaffolded at the deployment layer rather than fully implemented in-process.
+The crate currently runs HTTP APIs and an in-process JetStream consumer for `ProjectCreatedEvent` (`events.project.created`) using core event-handling support.
 
 ## Dependencies
 
@@ -53,12 +53,14 @@ Current local config points:
 - `APP_HOST`: bind address for the HTTP server
 - `APP_PORT`: bind port for the HTTP server
 - `NATS_URL`: reserved for the process-api consumer role and shared local setup
+- `NATS_PROJECT_CREATED_SUBJECT`: subject consumed for `ProjectCreatedEvent` (default `events.project.created`)
+- `NATS_SUBJECT`: fallback subject if `NATS_PROJECT_CREATED_SUBJECT` is not set
 - `NATS_JETSTREAM_STREAM`: target JetStream stream name for the bounded context
 - `NATS_JETSTREAM_DURABLE_CONSUMER`: durable consumer name for `process-api`
 - `NATS_JETSTREAM_ACK_POLICY`: intended acknowledgement policy
 - `NATS_JETSTREAM_ACK_WAIT`: intended acknowledgement timeout
 
-Today the DB settings are used by the running crate. The NATS consumer settings are scaffolding for the target architecture.
+Today both DB and NATS consumer settings are used by the running crate.
 
 ## Dev Setup
 

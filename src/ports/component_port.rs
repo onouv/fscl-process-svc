@@ -1,5 +1,6 @@
 use std::fmt::Display;
-use fscl_core::{ResourceId, ResourceIdError};
+
+use fscl_core::{IdFormat, ProjectId, ProjectIdError, ResourceId, ResourceIdError};
 use thiserror::Error;
 
 pub(crate) enum ComponentApplicationError {
@@ -8,9 +9,9 @@ pub(crate) enum ComponentApplicationError {
     Infrastructure(String),
 }
 
-
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Error)]
 pub(crate) enum RequestBuildError {
+    InvalidProjectId(ProjectIdError),
     InvalidId(ResourceIdError),
     InvalidParentId(ResourceIdError),
 }
@@ -18,6 +19,9 @@ pub(crate) enum RequestBuildError {
 impl Display for RequestBuildError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::InvalidProjectId(error) => {
+                write!(f, "Invalid project id {}", error)
+            }
             Self::InvalidId(error) => {
                 write!(f, "Invalid id {}", error)
             }
@@ -28,10 +32,9 @@ impl Display for RequestBuildError {
     }
 }
 
-
-
 #[derive(Clone)]
 pub struct NewComponentRequest {
+    pub project_id: ProjectId,
     pub id: ResourceId,
     pub name: String,
     pub description: Option<String>,
@@ -40,12 +43,20 @@ pub struct NewComponentRequest {
 
 impl NewComponentRequest {
     pub(crate) fn new(
+        project_id: String,
         id: String,
         name: String,
         description: Option<String>,
         parent_id: Option<String>,
     ) -> Result<Self, RequestBuildError> {
-        let id = match ResourceId::new(id) {
+        let project_id = match ProjectId::new(project_id) {
+            Ok(project_id) => project_id,
+            Err(e) => return Err(RequestBuildError::InvalidProjectId(e)),
+        };
+
+        let format = IdFormat::new(None, None, None).expect("default format is valid");
+
+        let id = match ResourceId::new(project_id.clone(), id, format.clone()) {
             Ok(id) => id,
             Err(e) => {
                 return Err(RequestBuildError::InvalidId(e));
@@ -53,7 +64,7 @@ impl NewComponentRequest {
         };
 
         let parent_id = match parent_id {
-            Some(p) => match ResourceId::new(p) {
+            Some(p) => match ResourceId::new(project_id.clone(), p, format) {
                 Ok(id) => Some(id),
                 Err(e) => return Err(RequestBuildError::InvalidParentId(e)),
             },
@@ -61,6 +72,7 @@ impl NewComponentRequest {
         };
 
         Ok(Self {
+            project_id,
             id,
             name,
             description,

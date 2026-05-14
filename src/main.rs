@@ -6,9 +6,17 @@ mod ports;
 use std::env;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use adapters::{driven::web::http_server::HttpServer, driving::db::*};
+use adapters::{
+    driven::{
+        msg::project_created_consumer::ProjectCreatedConsumer,
+        web::http_server::HttpServer,
+    },
+    driving::db::*,
+};
 use fscl_core::{
     ComponentLifecycleUow,
+    ProjectCreatedEventHandlerUow,
+    ProjectLifecycleUow,
     adapters::driving::{
         db::{SqlxPgDatabase, UnitOfWork},
         messaging::{ComponentDomainEventMapper, DomainEventOutboxPublisher, SqlxOutboxWriter},
@@ -19,8 +27,14 @@ use sqlx::PgPool;
 
 use crate::{
     adapters::driven::web::http_server::HttpServerConfig,
-    adapters::driving::db::sqlx_repository::SqlxRepository,
-    application::component_service::ComponentService,
+    adapters::driving::db::{
+        sqlx_project_repository::SqlxProjectRepository,
+        sqlx_repository::SqlxRepository,
+    },
+    application::{
+        component_service::ComponentService,
+        project_created_event_service::ProjectCreatedEventService,
+    },
 };
 
 fn get_database_url() -> String {
@@ -37,6 +51,16 @@ fn get_database_url() -> String {
     )
 }
 
+fn get_nats_url() -> String {
+    env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string())
+}
+
+fn get_project_created_subject() -> String {
+    env::var("NATS_PROJECT_CREATED_SUBJECT")
+        .or_else(|_| env::var("NATS_SUBJECT"))
+        .unwrap_or_else(|_| "events.project.created".to_string())
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
@@ -48,14 +72,27 @@ async fn main() -> anyhow::Result<()> {
     ensure_outbox_schema(&pool).await?;
 
     let repository = SqlxRepository::new(pool.clone());
-    let uow = UnitOfWork::new(SqlxPgDatabase::from_pool(pool));
+    let component_uow = UnitOfWork::new(SqlxPgDatabase::from_pool(pool.clone()));
+    let project_uow = UnitOfWork::new(SqlxPgDatabase::from_pool(pool));
     let publisher = DomainEventOutboxPublisher::new(
         "process-view",
         ComponentDomainEventMapper,
         SqlxOutboxWriter,
     );
-    let lifecycle = ComponentLifecycleUow::new(uow, repository, publisher);
+    let lifecycle = ComponentLifecycleUow::new(component_uow, repository, publisher);
     let component_service = ComponentService::new(lifecycle);
+
+    let project_repository = SqlxProjectRepository::new();
+    let project_lifecycle = ProjectLifecycleUow::new(project_uow, project_repository);
+    let project_created_handler = ProjectCreatedEventHandlerUow::new(project_lifecycle);
+    let project_created_event_service = ProjectCreatedEventService::new(project_created_handler);
+
+    let nats_client = async_nats::connect(get_nats_url()).await?;
+    let project_created_consumer = ProjectCreatedConsumer::new(
+        nats_client,
+        get_project_created_subject(),
+        project_created_event_service,
+    );
 
     let app_host = env::var("APP_HOST")
         .ok()
@@ -72,6 +109,25 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let server = HttpServer::new(cfg, component_service).await?;
+    let http_task = tokio::spawn(async move { server.run().await });
+    let consumer_task = tokio::spawn(async move { project_created_consumer.run().await });
 
-    server.run().await
+    tokio::select! {
+        result = http_task => {
+            match result {
+                Ok(inner) => inner,
+                Err(error) => Err(anyhow::anyhow!("http task failed: {}", error)),
+            }
+        }
+        result = consumer_task => {
+            match result {
+                Ok(inner) => inner,
+                Err(error) => Err(anyhow::anyhow!("consumer task failed: {}", error)),
+            }
+        }
+        _ = tokio::signal::ctrl_c() => {
+            log::info!("shutdown signal received");
+            Ok(())
+        }
+    }
 }

@@ -53,6 +53,8 @@ Current local config points:
 - `APP_HOST`: bind address for the HTTP server
 - `APP_PORT`: bind port for the HTTP server
 - `NATS_URL`: reserved for the process-api consumer role and shared local setup
+- `NATS_PROJECT_CREATED_SUBJECT`: subject consumed for `ProjectCreatedEvent` (default `events.project.created`)
+- `NATS_SUBJECT`: fallback subject if `NATS_PROJECT_CREATED_SUBJECT` is not set
 - `NATS_JETSTREAM_STREAM`: target JetStream stream name for the bounded context
 - `NATS_JETSTREAM_DURABLE_CONSUMER`: durable consumer name for `process-api`
 - `NATS_JETSTREAM_ACK_POLICY`: intended acknowledgement policy

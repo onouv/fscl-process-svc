@@ -47,10 +47,11 @@ where
         async move {
             lifecycle
                 .create_component(CreateComponentRequest {
-                    id: req.id.to_string(),
+                    project_id: req.project_id,
+                    id: req.id.local_id().to_string(),
                     name: req.name,
                     description: req.description,
-                    parent: req.parent_id.map(|p| p.to_string()),
+                    parent: req.parent_id.map(|p| p.local_id().to_string()),
                     children: vec![],
                     parameters: Default::default(),
                 })

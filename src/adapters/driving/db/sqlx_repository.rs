@@ -1,8 +1,10 @@
 use std::collections::BTreeMap;
 
 use fscl_core::{
+	IdFormat,
 	Component,
 	ComponentRepositoryPort,
+	ProjectId,
 	ResourceId,
 };
 use sqlx::{Error, Postgres, Row, pool::PoolConnection};
@@ -27,7 +29,7 @@ impl ComponentRepositoryPort for SqlxRepository {
 		tx: &mut Self::Tx<'_>,
 		id: &ResourceId,
 	) -> impl std::future::Future<Output = Result<Option<Component>, Self::Error>> + Send {
-		let id = id.as_str().to_string();
+		let id = id.to_string();
 		async move {
 			let row = sqlx::query("SELECT id, name, description FROM components WHERE id = $1")
 			.bind(id)
@@ -35,8 +37,15 @@ impl ComponentRepositoryPort for SqlxRepository {
 			.await?;
 
 			Ok(row.map(|r| {
+				let stored_id = r.get::<String, _>("id");
+				let (project, local) = stored_id
+					.split_once(':')
+					.expect("stored id is expected as '<project>:<local>'");
+				let project_id = ProjectId::new(project.to_string()).expect("stored project id is valid");
+				let format = IdFormat::new(None, None, None).expect("default format is valid");
+
 				Component::create(
-					ResourceId::new(r.get::<String, _>("id")).expect("stored id is valid"),
+					ResourceId::new(project_id, local.to_string(), format).expect("stored id is valid"),
 					r.get::<String, _>("name"),
 					r.get::<Option<String>, _>("description"),
 					None,
@@ -54,7 +63,7 @@ impl ComponentRepositoryPort for SqlxRepository {
 		tx: &mut Self::Tx<'_>,
 		component: &Component,
 	) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
-		let id = component.id().as_str().to_string();
+		let id = component.id().to_string();
 		let name = component.name();
 		let description = component.description();
 		async move {
@@ -80,7 +89,7 @@ impl ComponentRepositoryPort for SqlxRepository {
 		tx: &mut Self::Tx<'_>,
 		id: &ResourceId,
 	) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
-		let id = id.as_str().to_string();
+		let id = id.to_string();
 		async move {
 			sqlx::query("DELETE FROM components WHERE id = $1")
 				.bind(id)
